@@ -274,13 +274,17 @@ struct StructuredStorageDirectoryEntry {// [offset from start in bytes, length i
  */
 
 struct ole2 {
-	FILE * fp;
-	struct StructuredStorageHeader header;
-	SECT startOfDir;
-	unsigned sect_size;
-	unsigned mini_sect_size;
-	SECT startOfMiniFat;
-	int sizeOfDir;
+	FILE * fp;                             //pointer to file
+	struct StructuredStorageHeader header; //header
+	SECT startOfDir;                       //start of Dir sectors
+	SECT startOfMiniFat;                   //start of miniFat sectors
+	unsigned FATs;                         //size of FAT
+	unsigned miniFATs;                     //size of miniFAT
+	int sizeOfDir;                         //size of dir header
+	int FATsc;                             //count of FAT
+	int miniFATsc;                         //count of miniFAT
+	SECT * FAT;                            //array of FAT start points
+	SECT * miniFAT;                        //array of miniFAT start points
 }; 
 typedef struct ole2 * ole2_t;
 
@@ -289,51 +293,6 @@ struct ole2_dir {
 	ole2_t ole2;
 };
 typedef struct ole2_dir * ole2_dir_t;
-
-typedef struct ole2_dir_list {
-	ole2_dir_t dir;
-	struct ole2_dir_list * next;
-} ole2_dir_list;
-
-ole2_dir_list * ole2_dir_list_add(ole2_dir_list ** list, ole2_dir_t dir){
-	//create list if needed
-	if(*list == NULL){
-		*list = malloc(sizeof(ole2_dir_list));
-		if(*list == NULL)
-			return NULL;
-		list[0]->next = NULL;
-	}
-
-	//get last item in list
-	ole2_dir_list * ptr = *list;
-	while(ptr->next)
-		ptr=ptr->next;
-
-	//create new item
-	ole2_dir_list * node  = malloc(sizeof(ole2_dir_list));
-	if(!node)
-		return NULL;
-	node->next = NULL;
-	ptr->next = node;
-	ptr->dir = dir;
-
-	return *list;
-}
-
-void ole2_dir_list_free(ole2_dir_list * list){
-	while(list){
-		ole2_dir_list * ptr=list->next;	
-		if (list->dir)
-			free(list->dir);
-		free(list);
-		list = ptr;
-	}
-}
-
-#define ole2_list_for_each(item, list)\
-	ole2_dir_list * ___ptr = list; \
-	ole2_dir_t item; \
-	for (item = ___ptr->dir; ___ptr->next; ___ptr=___ptr->next, item = ___ptr->dir)
 
 /*
  * IMP
@@ -447,9 +406,17 @@ size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
 	return i;
 }
 
-FILE * _ole2_get_stream(ole2_t ole2, ULONG start, ULONG size){
+FILE * _ole2_get_fat_stream(ole2_t ole2, ULONG start, ULONG size){
 
 	FILE * stream = tmpfile();
+
+	int n;
+	//get FAT number
+	for (n = 0; n < ole2->FATsc; ++n) {
+		SECT FATn = ole2->FAT[n];	
+		if (start <= (FATn << ole2->header._uSectorShift))
+			break;
+	}
 
 	//seek to start
 	fseek(ole2->fp, start, SEEK_SET);
@@ -472,8 +439,55 @@ FILE * _ole2_get_stream(ole2_t ole2, ULONG start, ULONG size){
 
 		///* BYTE ENDIAN check:  <04-11-22, yourname> */
 		///* FAT chain append check:  <04-11-22, yourname> */
-		/*if (ch == ENDOFCHAIN)*/
-			/*printf("ENDOFCHAIN\n");*/
+		if (ch == ENDOFCHAIN){
+			fseek(ole2->fp, ole2->FAT[++n], SEEK_SET);
+			fread(&ch, 1, sizeof(SECT), ole2->fp);
+		}
+
+		fwrite(&ch, 1,  sizeof(SECT), stream);
+	}
+
+	fseek(stream, 0, SEEK_SET);
+	return stream;
+}
+
+FILE * _ole2_get_minifat_stream(ole2_t ole2, ULONG start, ULONG size){
+
+	FILE * stream = tmpfile();
+
+	int n;
+	//get FAT number
+	for (n = 0; n < ole2->miniFATsc; ++n) {
+		SECT miniFATn = ole2->miniFAT[n];	
+		if (start <= (miniFATn << ole2->header._uMiniSectorShift))
+			break;
+	}
+
+	//seek to start
+	fseek(ole2->fp, start, SEEK_SET);
+
+	ULONG i = 0;
+	//copy data
+	for(i=0; i<size; i+=sizeof(SECT)){
+		if (i==size){
+			fputc(EOF, stream);
+			break;
+		}
+
+		SECT ch;
+		fread(&ch, 1, sizeof(SECT), ole2->fp);
+
+		if ((int)ch == EOF){
+			fputc(EOF, stream);
+			break;
+		}
+
+		///* BYTE ENDIAN check:  <04-11-22, yourname> */
+		///* FAT chain append check:  <04-11-22, yourname> */
+		if (ch == ENDOFCHAIN){
+			fseek(ole2->fp, ole2->FAT[++n], SEEK_SET);
+			fread(&ch, 1, sizeof(SECT), ole2->fp);
+		}
 
 		fwrite(&ch, 1,  sizeof(SECT), stream);
 	}
@@ -484,6 +498,9 @@ FILE * _ole2_get_stream(ole2_t ole2, ULONG start, ULONG size){
 
 
 ole2_t ole2_init(FILE * fp){
+
+	int i;
+	size_t len;
 
 	//allocate
 	ole2_t ole2 = malloc(sizeof(ole2_t));
@@ -508,12 +525,101 @@ ole2_t ole2_init(FILE * fp){
 
 	ole2->sizeOfDir = sizeof(struct StructuredStorageDirectoryEntry);
 	
-	ole2->sect_size = 1<<ole2->header._uSectorShift;
-	ole2->mini_sect_size = 1<<ole2->header._uMiniSectorShift;
+	ole2->FATs = 1<<ole2->header._uSectorShift;
+	ole2->miniFATs = 1<<ole2->header._uMiniSectorShift;
 	
-	ole2->startOfDir = ole2->header._sectDirStart * ole2->sect_size;
-	ole2->startOfMiniFat = ole2->header._sectMiniFatStart * ole2->mini_sect_size;
+	ole2->startOfDir = ole2->header._sectDirStart << ole2->header._uSectorShift;
+	ole2->startOfMiniFat = ole2->header._sectMiniFatStart << ole2->header._uMiniSectorShift;
+
+	ole2->FAT = NULL;
+	ole2->FATsc = 0;
+	ole2->miniFAT = NULL;
+	ole2->miniFATsc = 0;
+
+	//FAT sectors count
+	ole2->FATsc = ole2->header._csectFat;
 	
+	if (ole2->FATsc > 0){
+		//FAT sectors array
+		ole2->FAT = malloc(sizeof(ole2->FAT) * ole2->FATsc);
+		if (ole2->FAT == NULL)
+			return NULL;
+
+		//fill array
+		for (i = 0; (i < ole2->FATsc); ++i)
+			ole2->FAT[i] = ole2->header._sectFat[i];
+
+		//get DiffSectors
+		SECT diff_off = ole2->header._sectDifStart;
+		for (i = 0; i < ole2->header._csectDif; ++i) {
+			fseek(ole2->fp, diff_off * ole2->FATs, SEEK_SET);
+			SECT sect;
+			fread(&sect, 1, sizeof(SECT), ole2->fp);
+			while(sect != ENDOFCHAIN){
+				//realloc FAT array
+				void * ptr = 
+						realloc(ole2->FAT, sizeof(ole2->FAT) * (ole2->FATsc + 1));
+				if (!ptr)
+					return NULL;
+				ole2->FAT = ptr;
+				//add sect to FAT array
+				ole2->FAT[ole2->FATsc++] = sect;
+
+				//reed next
+				fread(&sect, 1, sizeof(SECT), ole2->fp);
+			}	
+			//get pointer to next Dif
+			fread(&sect, 1, sizeof(SECT), ole2->fp);
+			diff_off = sect;
+		}
+	}
+
+	//niniFAT sectors count
+	ole2->miniFATsc = ole2->header._csectFat;
+	
+	if (ole2->miniFATsc > 0){	
+		//minFAT sectors array
+		if (ole2->miniFATsc > 0){
+			ole2->miniFAT = malloc(sizeof(ole2->miniFAT) * ole2->miniFATsc);
+			if (ole2->miniFAT == NULL)
+				return NULL;
+		}
+
+		//get ministream from Root Directory
+		fseek(ole2->fp, 512 + ole2->startOfDir, SEEK_SET); 
+		struct ole2_dir root;
+		len = fread(&root, 1, ole2->sizeOfDir, ole2->fp);
+		if (len != ole2->sizeOfDir) //error to read file
+			return NULL;
+
+		//get start of ministream
+		ULONG size = root.dir._ulSize;
+		ULONG start;
+		//check FAT or miniFAT
+		if (size < ole2->miniFATs){
+			//use miniFAT
+			start = 512 + 
+					ole2->startOfMiniFat +
+					(root.dir._sectStart << ole2->header._uMiniSectorShift);
+		} else {
+			//use FAT
+			start = 512 + 
+					(root.dir._sectStart << ole2->header._uSectorShift);
+		}	
+
+		//get DiffSectors
+		fseek(ole2->fp, start, SEEK_SET);
+		SECT sect;
+		fread(&sect, 1, sizeof(SECT), ole2->fp);
+		for (i = 0; i < ole2->miniFATsc; ++i) {
+			if (sect == ENDOFCHAIN)
+				break;
+			ole2->miniFAT[i] = sect;
+			fread(&sect, 1, sizeof(SECT), ole2->fp);
+		}		
+	}
+
+
 	return ole2;
 }
 
@@ -530,11 +636,7 @@ ole2_dir_t _ole2_dir_init(ole2_t ole2, SID sid){
 	memset(dir, 0, sizeof(struct ole2_dir));
 
 	//goto dir data
-	fseek(ole2->fp, 
-			512 + 
-			ole2->startOfDir + 
-			sid*(sizeof(struct StructuredStorageDirectoryEntry)), 
-	SEEK_SET);
+	fseek(ole2->fp, 512 + ole2->startOfDir + sid*ole2->sizeOfDir, SEEK_SET);
 	
 	//copy dir data
 	int len = fread(&dir->dir, 1, ole2->sizeOfDir, ole2->fp);
@@ -644,18 +746,19 @@ FILE * ole2_dir_stream(ole2_dir_t dir) {
 	ULONG start;
 
 	//check FAT or miniFAT
-	if (size < dir->ole2->mini_sect_size){
+	if (size < dir->ole2->miniFATs){
 		//use miniFAT
 		start = 512 + 
 				dir->ole2->startOfMiniFat +
-				dir->dir._sectStart * dir->ole2->mini_sect_size;
+				dir->dir._sectStart * dir->ole2->miniFATs;
+		return _ole2_get_minifat_stream(dir->ole2, start, size); 
 	} else {
 		//use FAT
 		start = 512 + 
-				dir->dir._sectStart * dir->ole2->sect_size;
+				dir->dir._sectStart * dir->ole2->FATs;
+		return _ole2_get_fat_stream(dir->ole2, start, size); 
 	}
 
-	return _ole2_get_stream(dir->ole2, start, size); 
 };
 
 ole2_t ole2_open(const char * filename){
@@ -686,17 +789,24 @@ ole2_t ole2_open(const char * filename){
 	return ole2_init(newfile); 
 };
 
-ole2_dir_list * ole2_dirs(ole2_t ole2){
+int ole2_dirs(ole2_t ole2, void * user_data,
+			int(*callback)(void * user_data, ole2_dir_t dir))
+{
 	int i=0;
-	ole2_dir_list * list = NULL;
-	
 	ole2_dir_t dir = _ole2_dir_init(ole2, i++);
 	while(dir && dir->dir._ab[0]){
-		ole2_dir_list_add(&list, dir);	
+		if (callback){
+			if (callback(user_data, dir)){
+				free(dir);
+				return 1;
+			}
+		}
+		ole2_dir_t ptr = dir;
 		dir = _ole2_dir_init(ole2, i++);
+		free(ptr);
 	}
 
-	return list;
+	return 0;
 }
 
 #ifdef __cplusplus
