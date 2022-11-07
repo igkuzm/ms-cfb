@@ -66,7 +66,7 @@
 	/*return outbuf;*/
 /*}*/
 
-int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value){
+int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value){
 	char * str = NULL;
 	
 	if (dwType == 30){
