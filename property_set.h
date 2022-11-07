@@ -372,26 +372,23 @@ int property_set_get(
 			uint32_t *v32;
 			uint64_t *v64;
 			
-			//if (byteOrder){
-				//if (ptv.dwType == PSET_I2||ptv.dwType ==  PSET_UI2){
-					//v16 = (uint16_t *)ptr;
-					//*v16 = PS_WORD_SW(*v16);
-					//ptr = (uint8_t *)v16;		  
-						//break;
-				//}
-				//else if (ptv.dwType == PSET_I4 || ptv.dwType == PSET_R4 || ptv.dwType == PSET_UI4){
-					//v32 = (uint32_t *)ptr;
-					//*v32 = PS_DWORD_SW(*v32);
-					//ptr = (uint8_t *)v32;		  
-						//break;
-				//}				
-				//else if (ptv.dwType == PSET_I8 || ptv.dwType == PSET_R8 || ptv.dwType == PSET_UI8 || ptv.dwType == PSET_I8){
-					//v64 = (uint64_t *)ptr;
-					//*v64 = PS_DDWORD_SW(*v64);
-					//ptr = (uint8_t *)v64;		  
-						//break;
-				//}				
-			//}
+			if (byteOrder){
+				if (ptv.dwType == PSET_I2||ptv.dwType ==  PSET_UI2){
+					v16 = (uint16_t *)ptr;
+					*v16 = PS_WORD_SW(*v16);
+					ptr = (uint8_t *)v16;		  
+				}
+				else if (ptv.dwType == PSET_I4 || ptv.dwType == PSET_R4 || ptv.dwType == PSET_UI4){
+					v32 = (uint32_t *)ptr;
+					*v32 = PS_DWORD_SW(*v32);
+					ptr = (uint8_t *)v32;		  
+				}				
+				else if (ptv.dwType == PSET_I8 || ptv.dwType == PSET_R8 || ptv.dwType == PSET_UI8 || ptv.dwType == PSET_I8){
+					v64 = (uint64_t *)ptr;
+					*v64 = PS_DDWORD_SW(*v64);
+					ptr = (uint8_t *)v64;		  
+				}				
+			}
 
 			//callback
 			if (callback)
