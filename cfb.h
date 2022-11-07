@@ -389,7 +389,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 	cfb->mfat = NULL;
 	
 	//get byte order
-	uint32_t byteOrder;
+	uint16_t byteOrder;
 	fseek(fp, 0x01C, SEEK_SET);	
 	if (fread(&byteOrder, 2, 1, fp) != 1) 
 		return CFB_READ_ERR|CFB_BYTEORDE_ERR;
@@ -605,39 +605,39 @@ size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
 
 		//get utf32
 		uint16_t utf16_char;
-		if ((*ptr & 0b11110000) == 240) {
+		if ((*ptr & 240) == 240) {
 			//take last 3 bit from first char
-			uint16_t byte0 = (*ptr++ & 0b00000111) << 18;	
+			uint16_t byte0 = (*ptr++ & 7) << 18;	
 			
 			//take last 6 bit from second char
-			uint16_t byte1 = (*ptr++ & 0b00111111) << 12;	
+			uint16_t byte1 = (*ptr++ & 63) << 12;	
 			
 			//take last 6 bit from third char
-			uint16_t byte2 = (*ptr++ & 0b00111111) << 6;	
+			uint16_t byte2 = (*ptr++ & 63) << 6;	
 			
 			//take last 6 bit from forth char
-			uint16_t byte3 = *ptr++ & 0b00111111;	
+			uint16_t byte3 = *ptr++ & 63;	
 			
 			utf16_char = (byte0 | byte1 | byte2 | byte3);					
 		} 
-		else if ((*ptr & 0b11100000) == 224) {
+		else if ((*ptr & 224) == 224) {
 			//take last 4 bit from first char
-			uint16_t byte0 = (*ptr++ & 0b00001111) << 12;	
+			uint16_t byte0 = (*ptr++ & 15) << 12;	
 			
 			//take last 6 bit from second char
-			uint16_t byte1 = (*ptr++ & 0b00111111) << 6;	
+			uint16_t byte1 = (*ptr++ & 63) << 6;	
 			
 			//take last 6 bit from third char
-			uint16_t byte2 = *ptr++ & 0b00111111;	
+			uint16_t byte2 = *ptr++ & 63;	
 
 			utf16_char = (byte0 | byte1 | byte2);
 		} 
-		else if ((*ptr & 0b11000000) == 192){
+		else if ((*ptr & 192) == 192){
 			//take last 5 bit from first char
-			uint16_t byte0 = (*ptr++ & 0b00011111) << 6;	
+			uint16_t byte0 = (*ptr++ & 31) << 6;	
 			
 			//take last 6 bit from second char
-			uint16_t byte1 = *ptr++ & 0b00111111;	
+			uint16_t byte1 = *ptr++ & 63;	
 
 			utf16_char = (byte0 | byte1);
 		}
