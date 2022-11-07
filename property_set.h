@@ -330,17 +330,9 @@ int property_set_get(
 		fseek(fp, soff.dwOffset, SEEK_SET);
 		fread(buf, 1, pshead.cbSection*4, fp);				
 		if (byteOrder){
-			for (i = 0; i < pshead.cbSection*4;) {
-				char c1 = buf[i];	
-				char c2 = buf[i+1];	
-				char c3 = buf[i+2];	
-				char c4 = buf[i+3];	
-				buf[i] = c4;
-				buf[i+1] = c3;
-				buf[i+2] = c2;
-				buf[i+3] = c1;
-				i+=4;
-			}
+			uint32_t * buf32 = (uint32_t *)buf;
+			for (i = 0; i < pshead.cbSection; ++i)
+				buf32[i] = PS_DWORD_SW(buf32[i]);
 		}		
 
 		//for each property
