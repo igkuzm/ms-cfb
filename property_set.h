@@ -368,24 +368,27 @@ int property_set_get(
 
 			//pointer to value
 			uint8_t * ptr = buf + poff.dwOffset + 4;
+			uint16_t *v16;
+			uint32_t *v32;
+			uint64_t *v64;
 			
 			if (byteOrder){
 				if (ptv.dwType == PSET_I2||ptv.dwType ==  PSET_UI2){
-					uint16_t *v = (uint16_t *)ptr;
-					*v = PS_WORD_SW(*v);
-					ptr = (uint8_t *)v;		  
+					v16 = (uint16_t *)ptr;
+					*v16 = PS_WORD_SW(*v16);
+					ptr = (uint8_t *)v16;		  
 						break;
 				}
 				else if (ptv.dwType == PSET_I4 || ptv.dwType == PSET_R4 || ptv.dwType == PSET_UI4){
-					uint32_t *v = (uint32_t *)ptr;
-					*v = PS_DWORD_SW(*v);
-					ptr = (uint8_t *)v;		  
+					v32 = (uint32_t *)ptr;
+					*v32 = PS_DWORD_SW(*v32);
+					ptr = (uint8_t *)v32;		  
 						break;
 				}				
 				else if (ptv.dwType == PSET_I8 || ptv.dwType == PSET_R8 || ptv.dwType == PSET_UI8 || ptv.dwType == PSET_I8){
-					uint64_t *v = (uint64_t *)ptr;
-					*v = PS_DDWORD_SW(*v);
-					ptr = (uint8_t *)v;		  
+					v64 = (uint64_t *)ptr;
+					*v64 = PS_DDWORD_SW(*v64);
+					ptr = (uint8_t *)v64;		  
 						break;
 				}				
 			}
