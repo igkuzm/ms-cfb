@@ -2,13 +2,14 @@
  * File              : property_set.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 05.11.2022
+ * Last Modified Date: 07.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
 #ifndef PROPERTY_SET_H_
 #define PROPERTY_SET_H_
 
+#include <stdbool.h>
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -238,6 +239,30 @@ typedef struct tagSERIALIZEDPROPERTYVALUE
  * Get properties from FILE
  */
 
+//switch bite order
+uint32_t PS_DWORD_SW (uint32_t i)
+{
+    unsigned char c1, c2, c3, c4;
+
+	c1 = i & 255;
+	c2 = (i >> 8) & 255;
+	c3 = (i >> 16) & 255;
+	c4 = (i >> 24) & 255;
+
+	return ((int)c1 << 24) + ((int)c2 << 16) + ((int)c3 << 8) + c4;
+}
+
+uint16_t PS_WORD_SW (uint16_t i)
+{
+    unsigned char c1, c2;
+    
+	c1 = i & 255;
+	c2 = (i >> 8) & 255;
+
+	return (c1 << 8) + c2;
+}
+
+
 int property_set_get(
 			FILE * fp,            //file pointer
 			void * user_data,     //data to transfer to callback
@@ -251,6 +276,7 @@ int property_set_get(
 {
 	int i, k, c;
 	size_t len;
+	bool byteOrder = false;
 
 	//get property stream header
 	PROPERTYSETHEADER head;
@@ -260,8 +286,21 @@ int property_set_get(
 		return PSET_ERR_FILE; //error to read file
 	
 	//check bite order - should be 0xfffe
-	if (head.wByteOrder != 0xFFFE)
+	if (head.wByteOrder == 0xFFFE){ // LE byte order 
+	} else if (head.wByteOrder == 0xFEFF){
+		// need to change byte order
+		byteOrder = true;
+	} else
 		return PSET_ERR_HEADER; //error to read header
+							
+	if (byteOrder){
+		head.wFormat = PS_WORD_SW(head.wFormat);
+		head.dwOSVer = PS_DWORD_SW(head.dwOSVer);
+		for (i = 0; i < 4; ++i) 
+			head.clsID[i] = PS_DWORD_SW(head.clsID[i]); 
+
+		head.count = PS_DWORD_SW(head.count);
+	}
 	
 	//get sectors
 	for (i = 0; i < head.count; ++i) {
@@ -269,18 +308,27 @@ int property_set_get(
 		FORMATIDOFFSET soff;
 		fseek(fp, sizeof(PROPERTYSETHEADER) + i*sizeof(soff), SEEK_SET);
 		fread(&soff, 1, sizeof(FORMATIDOFFSET), fp);
+		if (byteOrder){
+			for (i = 0; i < 4; ++i) 
+				soff.fmtid[i] = PS_DWORD_SW(soff.fmtid[i]); 			
+			soff.dwOffset = PS_DWORD_SW(soff.dwOffset);
+		}		
 		
 		//get property section header
 		PROPERTYSECTIONHEADER pshead;
 		fseek(fp, soff.dwOffset, SEEK_SET);
 		fread(&pshead, 1, sizeof(PROPERTYSECTIONHEADER), fp);		
+		if (byteOrder){
+			pshead.cbSection = PS_DWORD_SW(pshead.cbSection);
+			pshead.cProperties = PS_DWORD_SW(pshead.cProperties);
+		}
 
 		//copy section to buf
-		char * buf = malloc(pshead.cbSection*4);
+		uint32_t * buf = malloc(pshead.cbSection*4);
 		if (!buf)
 			return PSET_ERR_ALLOC;
 		fseek(fp, soff.dwOffset, SEEK_SET);
-		fread(buf, 1, pshead.cbSection*4, fp);				
+		fread(buf, 1, pshead.cbSection, fp);				
 
 		//for each property
 		for (k = 0; k < pshead.cProperties; ++k) {
@@ -290,14 +338,20 @@ int property_set_get(
 					+ sizeof(PROPERTYSECTIONHEADER) 
 							+ k*sizeof(PROPERTYIDOFFSET), SEEK_SET);
 			fread(&poff, 1, sizeof(PROPERTYIDOFFSET), fp);			
+			if (byteOrder){
+				poff.propid = PS_DWORD_SW(poff.propid);
+				poff.dwOffset = PS_DWORD_SW(poff.dwOffset);
+			}
 
 			//get type/value pair 
 			SERIALIZEDPROPERTYVALUE ptv;
 			fseek(fp, soff.dwOffset + poff.dwOffset, SEEK_SET);
 			fread(&ptv, 1, sizeof(SERIALIZEDPROPERTYVALUE), fp);			
+			if (byteOrder)
+				ptv.dwType = PS_DWORD_SW(ptv.dwType);
 
 			//pointer to value
-			uint32_t * ptr = (uint32_t *)(buf + poff.dwOffset + 4);
+			uint32_t * ptr = (uint32_t *)(buf + poff.dwOffset);
 
 			//callback
 			if (callback)

@@ -329,7 +329,7 @@ enum {
  */
 
 //switch bite order
-DWORD dword_sw (DWORD i)
+DWORD CFB_DWORD_SW (DWORD i)
 {
     unsigned char c1, c2, c3, c4;
 
@@ -341,7 +341,7 @@ DWORD dword_sw (DWORD i)
 	return ((int)c1 << 24) + ((int)c2 << 16) + ((int)c3 << 8) + c4;
 }
 
-WORD word_sw (WORD i)
+WORD CFB_WORD_SW (WORD i)
 {
     unsigned char c1, c2;
     
@@ -355,25 +355,25 @@ void _cfb_dir_sw(cfb_dir * dir){
 	
 	///* TODO: _ab
 	
-	dir->_cb = word_sw(dir->_cb);
-	dir->_sidLeftSib = dword_sw(dir->_sidLeftSib);
-	dir->_sidRightSib = dword_sw(dir->_sidRightSib);
-	dir->_sidChild = dword_sw(dir->_sidChild);
+	dir->_cb = CFB_WORD_SW(dir->_cb);
+	dir->_sidLeftSib = CFB_DWORD_SW(dir->_sidLeftSib);
+	dir->_sidRightSib = CFB_DWORD_SW(dir->_sidRightSib);
+	dir->_sidChild = CFB_DWORD_SW(dir->_sidChild);
 	
-	dir->_clsId.a = dword_sw(dir->_clsId.a); 
-	dir->_clsId.b = dword_sw(dir->_clsId.b); 
-	dir->_clsId.c = dword_sw(dir->_clsId.c); 
-	dir->_clsId.d = dword_sw(dir->_clsId.d); 
+	dir->_clsId.a = CFB_DWORD_SW(dir->_clsId.a); 
+	dir->_clsId.b = CFB_DWORD_SW(dir->_clsId.b); 
+	dir->_clsId.c = CFB_DWORD_SW(dir->_clsId.c); 
+	dir->_clsId.d = CFB_DWORD_SW(dir->_clsId.d); 
 
-	dir->_dwUserFlags = dword_sw(dir->_dwUserFlags);
-	dir->_time[0].dwLowDateTime = dword_sw(dir->_time[0].dwLowDateTime);
-	dir->_time[0].dwHighDateTime = dword_sw(dir->_time[0].dwHighDateTime);
-	dir->_time[1].dwLowDateTime = dword_sw(dir->_time[1].dwLowDateTime);
-	dir->_time[1].dwHighDateTime = dword_sw(dir->_time[1].dwHighDateTime);	
+	dir->_dwUserFlags = CFB_DWORD_SW(dir->_dwUserFlags);
+	dir->_time[0].dwLowDateTime = CFB_DWORD_SW(dir->_time[0].dwLowDateTime);
+	dir->_time[0].dwHighDateTime = CFB_DWORD_SW(dir->_time[0].dwHighDateTime);
+	dir->_time[1].dwLowDateTime = CFB_DWORD_SW(dir->_time[1].dwLowDateTime);
+	dir->_time[1].dwHighDateTime = CFB_DWORD_SW(dir->_time[1].dwHighDateTime);	
 
-	dir->_sectStart = dword_sw(dir->_sectStart);
-	dir->_ulSize = dword_sw(dir->_ulSize);
-	dir->_dptPropType = word_sw(dir->_dptPropType);
+	dir->_sectStart = CFB_DWORD_SW(dir->_sectStart);
+	dir->_ulSize = CFB_DWORD_SW(dir->_ulSize);
+	dir->_dptPropType = CFB_WORD_SW(dir->_dptPropType);
 }
 
 int _cfb_init(struct cfb * cfb, FILE *fp){
@@ -409,26 +409,26 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 
 	// make byte order change
 	if (cfb->biteOrder){
-		cfb->header._clid.a = dword_sw(cfb->header._clid.a); 
-		cfb->header._clid.b = dword_sw(cfb->header._clid.b); 
-		cfb->header._clid.c = dword_sw(cfb->header._clid.c); 
-		cfb->header._clid.d = dword_sw(cfb->header._clid.d); 
+		cfb->header._clid.a = CFB_DWORD_SW(cfb->header._clid.a); 
+		cfb->header._clid.b = CFB_DWORD_SW(cfb->header._clid.b); 
+		cfb->header._clid.c = CFB_DWORD_SW(cfb->header._clid.c); 
+		cfb->header._clid.d = CFB_DWORD_SW(cfb->header._clid.d); 
 
-		cfb->header._uMinorVersion = word_sw(cfb->header._uMinorVersion);
-		cfb->header._uDllVersion = word_sw(cfb->header._uDllVersion);
-		cfb->header._uSectorShift = word_sw(cfb->header._uSectorShift);
-		cfb->header._uMiniSectorShift = word_sw(cfb->header._uMiniSectorShift);
-		cfb->header._usReserved = word_sw(cfb->header._usReserved);
-		cfb->header._ulReserved1 = dword_sw(cfb->header._ulReserved1); 
-		cfb->header._ulReserved2 = dword_sw(cfb->header._ulReserved2); 
-		cfb->header._csectFat = dword_sw(cfb->header._csectFat); 
-		cfb->header._sectDirStart = dword_sw(cfb->header._sectDirStart); 
-		cfb->header._signature = dword_sw(cfb->header._signature); 
-		cfb->header._ulMiniSectorCutoff = dword_sw(cfb->header._ulMiniSectorCutoff); 
-		cfb->header._sectMiniFatStart = dword_sw(cfb->header._sectMiniFatStart); 
-		cfb->header._csectMiniFat = dword_sw(cfb->header._csectMiniFat); 
-		cfb->header._sectDifStart = dword_sw(cfb->header._sectDifStart); 
-		cfb->header._csectDif = dword_sw(cfb->header._csectDif); 
+		cfb->header._uMinorVersion = CFB_WORD_SW(cfb->header._uMinorVersion);
+		cfb->header._uDllVersion = CFB_WORD_SW(cfb->header._uDllVersion);
+		cfb->header._uSectorShift = CFB_WORD_SW(cfb->header._uSectorShift);
+		cfb->header._uMiniSectorShift = CFB_WORD_SW(cfb->header._uMiniSectorShift);
+		cfb->header._usReserved = CFB_WORD_SW(cfb->header._usReserved);
+		cfb->header._ulReserved1 = CFB_DWORD_SW(cfb->header._ulReserved1); 
+		cfb->header._ulReserved2 = CFB_DWORD_SW(cfb->header._ulReserved2); 
+		cfb->header._csectFat = CFB_DWORD_SW(cfb->header._csectFat); 
+		cfb->header._sectDirStart = CFB_DWORD_SW(cfb->header._sectDirStart); 
+		cfb->header._signature = CFB_DWORD_SW(cfb->header._signature); 
+		cfb->header._ulMiniSectorCutoff = CFB_DWORD_SW(cfb->header._ulMiniSectorCutoff); 
+		cfb->header._sectMiniFatStart = CFB_DWORD_SW(cfb->header._sectMiniFatStart); 
+		cfb->header._csectMiniFat = CFB_DWORD_SW(cfb->header._csectMiniFat); 
+		cfb->header._sectDifStart = CFB_DWORD_SW(cfb->header._sectDifStart); 
+		cfb->header._csectDif = CFB_DWORD_SW(cfb->header._csectDif); 
 	}
 	
 	///* TODO: check signature */
@@ -455,7 +455,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 		// only 109 FAT SECT in header - other in DIF
 		for (i=0; i < 109; i++){
 			if (cfb->biteOrder){
-				cfb->fat[i] = dword_sw(cfb->header._sectFat[i]);
+				cfb->fat[i] = CFB_DWORD_SW(cfb->header._sectFat[i]);
 			} else {
 				cfb->fat[i] = cfb->header._sectFat[i];
 			}
@@ -485,7 +485,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 			int d = 0; // count sectors
 			while(fread(&ch, 4, 1, fp) == 1){
 				if (cfb->biteOrder)
-					ch = dword_sw(ch);
+					ch = CFB_DWORD_SW(ch);
 				
 				if (ch == ENDOFCHAIN || ch == EOF)
 					break;
@@ -498,7 +498,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 						break;
 					}
 					if (cfb->biteOrder)
-						ch = dword_sw(ch);
+						ch = CFB_DWORD_SW(ch);
 					i = 0;
 				}
 				cfb->fat[i++] = ch;
@@ -532,7 +532,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 				break;
 			}
 			if (cfb->biteOrder)
-				ch = dword_sw(ch);
+				ch = CFB_DWORD_SW(ch);
 
 			if (fwrite(&ch, 4, 1, fp) != 1){
 				error = CFB_WRITE_ERR|CFB_ROOT_ERR|CFB_MFAT_ERR;

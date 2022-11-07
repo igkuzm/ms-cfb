@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	
 	/*printf("ROOT DIR: %s\n", cfb_dir_name(&cfb.root));*/
 
-	/*FILE *si = cfb_dir_get_stream_by_name(&cfb, "\005SummaryInformation");*/
+	FILE *si = cfb_dir_get_stream_by_name(&cfb, "\005SummaryInformation");
 
 
 	/*cbf_dir dir;*/
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 	
 	/*FILE * stream = ole2_dir_stream(dir);	*/
 
-	/*property_set_get(si, NULL, prop_cb);*/
+	property_set_get(si, NULL, prop_cb);
 
 	return 0;
 }
