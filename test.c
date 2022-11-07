@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 	print_fat_stream(&cfb);
 	print_mfat_stream(&cfb);
 	print_dir(&cfb.root);
-	
+
 	cfb_dir dir;
 	cfb_get_dir_by_name(&cfb, &dir, "\005SummaryInformation");
 	print_dir(&dir);

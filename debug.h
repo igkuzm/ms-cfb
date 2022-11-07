@@ -69,7 +69,7 @@ void print_mfat_stream(struct cfb * cfb){
 void print_dir(cfb_dir * dir){
 	int i;
 	printf("********************************************\n");
-	printf("DIR...\n");
+	printf("DIR %s\n", cfb_dir_name(dir));
 	printf("********************************************\n");	
 	printf("_ab: ");
 	for (i = 0; i < dir->_cb; ++i) 
