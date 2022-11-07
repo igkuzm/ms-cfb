@@ -240,6 +240,22 @@ typedef struct tagSERIALIZEDPROPERTYVALUE
  */
 
 //switch bite order
+uint64_t PS_DDWORD_SW (uint64_t i)
+{
+    unsigned char c1, c2, c3, c4, c5, c6, c7, c8;
+
+	c1 = i & 255;
+	c2 = (i >> 8) & 255;
+	c3 = (i >> 16) & 255;
+	c4 = (i >> 24) & 255;
+	c5 = (i >> 32) & 255;
+	c6 = (i >> 40) & 255;
+	c7 = (i >> 48) & 255;
+	c8 = (i >> 54) & 255;
+
+	return ((uint64_t)c1 << 54) + ((uint64_t)c2 << 48) + ((uint64_t)c3 << 40) + ((uint64_t)c4 << 32) + ((uint64_t)c5 << 24) + ((uint64_t)c6 << 16) + ((uint64_t)c7 << 8) + c8;
+}
+
 uint32_t PS_DWORD_SW (uint32_t i)
 {
     unsigned char c1, c2, c3, c4;
@@ -352,6 +368,27 @@ int property_set_get(
 
 			//pointer to value
 			uint8_t * ptr = buf + poff.dwOffset + 4;
+			
+			if (byteOrder){
+				if (ptv.dwType == PSET_I2||ptv.dwType ==  PSET_UI2){
+					uint16_t *v = (uint16_t *)ptr;
+					*v = PS_WORD_SW(*v);
+					ptr = (uint8_t *)v;		  
+						break;
+				}
+				else if (ptv.dwType == PSET_I4 || ptv.dwType == PSET_R4 || ptv.dwType == PSET_UI4){
+					uint32_t *v = (uint32_t *)ptr;
+					*v = PS_DWORD_SW(*v);
+					ptr = (uint8_t *)v;		  
+						break;
+				}				
+				else if (ptv.dwType == PSET_I8 || ptv.dwType == PSET_R8 || ptv.dwType == PSET_UI8 || ptv.dwType == PSET_I8){
+					uint64_t *v = (uint64_t *)ptr;
+					*v = PS_DDWORD_SW(*v);
+					ptr = (uint8_t *)v;		  
+						break;
+				}				
+			}
 
 			//callback
 			if (callback)
