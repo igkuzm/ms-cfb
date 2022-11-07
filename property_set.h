@@ -63,7 +63,7 @@ extern "C"{
  */
 static int 
 property_set_get(FILE * fp, void * user_data,
-	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value));
+	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value));
 
 
 /*
@@ -329,11 +329,6 @@ int property_set_get(
 			return PSET_ERR_ALLOC;
 		fseek(fp, soff.dwOffset, SEEK_SET);
 		fread(buf, 1, pshead.cbSection*4, fp);				
-		//if (byteOrder){
-			//uint32_t * buf32 = (uint32_t *)buf;
-			//for (i = 0; i < pshead.cbSection; ++i)
-				//buf32[i] = PS_DWORD_SW(buf32[i]);
-		//}		
 
 		//for each property
 		for (k = 0; k < pshead.cProperties; ++k) {
