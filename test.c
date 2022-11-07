@@ -2,7 +2,7 @@
  * File              : test.c
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 05.11.2022
+ * Last Modified Date: 07.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -10,67 +10,64 @@
 #include "../libdoc2/property_set.h"
 
 #include <iconv.h>
+#include <stdint.h>
 #include <stdio.h>
 
-
 static char* unicode_decode_iconv(const char *s, size_t len, iconv_t ic) {
-    char* outbuf = 0;
+	char* outbuf = 0;
 
-    if(s && len && ic)
-    {
-        size_t outlenleft = len;
-        int outlen = len;
-        size_t inlenleft = len;
-        const char* src_ptr = s;
-        char* out_ptr = 0;
+	if(s && len && ic)
+	{
+		size_t outlenleft = len;
+		int outlen = len;
+		size_t inlenleft = len;
+		const char* src_ptr = s;
+		char* out_ptr = 0;
 
-        size_t st; 
-        outbuf = malloc(outlen + 1);
+		size_t st; 
+		outbuf = malloc(outlen + 1);
 
 		if(outbuf)
-        {
-            out_ptr = outbuf;
-            while(inlenleft)
-            {
-                st = iconv(ic, (char **)&src_ptr, &inlenleft, (char **)&out_ptr,(size_t *) &outlenleft);
-                if(st == (size_t)(-1))
-                {
-                    if(errno == E2BIG)
-                    {
-                        size_t diff = out_ptr - outbuf;
-                        outlen += inlenleft;
-                        outlenleft += inlenleft;
-                        outbuf = realloc(outbuf, outlen + 1);
-                        if(!outbuf)
-                        {
-                            break;
-                        }
-                        out_ptr = outbuf + diff;
-                    }
-                    else
-                    {
-                        free(outbuf), outbuf = NULL;
-                        break;
-                    }
-                }
-            }
-        }
-        outlen -= outlenleft;
+		{
+			out_ptr = outbuf;
+			while(inlenleft)
+			{
+				st = iconv(ic, (char **)&src_ptr, &inlenleft, (char **)&out_ptr,(size_t *) &outlenleft);
+				if(st == (size_t)(-1))
+				{
+					if(errno == E2BIG)
+					{
+						size_t diff = out_ptr - outbuf;
+						outlen += inlenleft;
+						outlenleft += inlenleft;
+						outbuf = realloc(outbuf, outlen + 1);
+						if(!outbuf)
+						{
+							break;
+						}
+						out_ptr = outbuf + diff;
+					}
+					else
+					{
+						free(outbuf), outbuf = NULL;
+						break;
+					}
+				}
+			}
+		}
+		outlen -= outlenleft;
 
-        if(outbuf)
-        {
-            outbuf[outlen] = 0;
-        }
-    }
-    return outbuf;
+		if(outbuf)
+		{
+			outbuf[outlen] = 0;
+		}
+	}
+	return outbuf;
 }
 
 int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value){
 	char * str = NULL;
 	
-	/*printf("longVal=%llx\n", *(uint64_t *)value);*/
-	/*printf("s[%u]=%s\n", *(uint32_t  *)value, (char *)value + 4);*/
-
 	if (dwType == 30){
 		char buf[BUFSIZ];
 		strncpy(buf, (char*)value + 4, BUFSIZ);
@@ -94,15 +91,39 @@ int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value
 	return 0;
 };
 
+int callback(void * user_data, cbf_dir dir){
+	printf("DIR AB: %x\n", dir._ab[0]);
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
-	ole2_t ole2 = ole2_open("1.doc");	
 
-	ole2_dir_t dir = ole2_get_dir(ole2, "\005SummaryInformation");
+	struct cbf cbf;
+	int error = cbf_open(&cbf, "1.doc");
+	if (error)
+		printf("ERROR OPEN FILE: %x\n", error);
 	
-	FILE * stream = ole2_dir_stream(dir);	
+	printf("ROOT DIR: %s\n", cbf_dir_name(&cbf.root));
 
-	property_set_get(stream, NULL, prop_cb);
+	FILE *si = cbf_dir_get_stream_by_name(&cbf, "\005SummaryInformation");
+
+
+	/*cbf_dir dir;*/
+	/*cbf_dir_by_sid(&cbf, 4, &dir, cbf_dir_callback);*/
+	
+	/*if (cbf_get_dir_by_sid(&cbf, &dir, 4))*/
+		/*printf("ERRROR TO OPEN DIR\n");*/
+
+	/*if (cbf_get_dir_by_name(&cbf, &dir, "\005SummaryInformation"))*/
+		/*printf("ERRROR TO OPEN DIR\n");	*/
+	
+	/*printf("OPENED DIR: %s\n", cbf_dir_name(&dir));*/
+	
+	/*FILE * stream = ole2_dir_stream(dir);	*/
+
+	property_set_get(si, NULL, prop_cb);
 
 	return 0;
 }

@@ -2,7 +2,7 @@
  * File              : ole2.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 05.11.2022
+ * Last Modified Date: 07.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -136,8 +136,6 @@ const SECT FREESECT       = 0xFFFFFFFF;
  * DIF sector.
  */ 
 
-static const char wcbff_signature[8]     = {0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1};
-static const char wcbff_signature_old[8] = {0x0e, 0x11, 0xfc, 0x0d, 0xd0, 0xcf, 0x11, 0xe0};
  
 struct StructuredStorageHeader {  // [offset from start in bytes, length in bytes]
 	BYTE _abSig[8];               // [000H,08] {0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1} for current version,
@@ -163,7 +161,7 @@ struct StructuredStorageHeader {  // [offset from start in bytes, length in byte
 	FSINDEX _csectDif;            // [048H,04] number of SECTs in the DIF chain
 	SECT _sectFat[109];           // [04CH,436] the SECTs of the first 109 FAT sectors
 };
-typedef struct StructuredStorageHeader wcbff_header;
+typedef struct StructuredStorageHeader cfb_header;
 
 
 /*
@@ -268,65 +266,279 @@ struct StructuredStorageDirectoryEntry {// [offset from start in bytes, length i
 	ULONG _ulSize;                      // [078H,04] size of stream in bytes (if _mse=STGTY_STREAM)
     DFPROPTYPE _dptPropType;            // [07CH,02] Reserved for future use. Must be zero.                                           
 };
+typedef struct StructuredStorageDirectoryEntry cfb_dir;
+
+
+static const char cfb_signature[8]     = {0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1};
+static const char cfb_signature_old[8] = {0x0e, 0x11, 0xfc, 0x0d, 0xd0, 0xcf, 0x11, 0xe0};
 
 /*
- * OLE2 Structures
+ * MS-CMF structure
+ * countain file header, root dir header and pointers to streams
  */
-
-struct ole2 {
-	FILE * fp;                             //pointer to file
-	struct StructuredStorageHeader header; //header
-	SECT startOfDir;                       //start of Dir sectors
-	SECT startOfMiniFat;                   //start of miniFat sectors
-	unsigned FATs;                         //size of FAT
-	unsigned miniFATs;                     //size of miniFAT
-	int sizeOfDir;                         //size of dir header
-	int FATsc;                             //count of FAT
-	int miniFATsc;                         //count of miniFAT
-	SECT * FAT;                            //array of FAT start points
-	SECT * miniFAT;                        //array of miniFAT start points
-}; 
-typedef struct ole2 * ole2_t;
-
-struct ole2_dir {
-	struct StructuredStorageDirectoryEntry dir;
-	ole2_t ole2;
+struct cfb {
+	FILE * fp;         // pointer to file
+	cfb_header header;
+	cfb_dir root;
+	bool biteOrder;
+	SECT * fat;        // FAT sect array
+	SECT * mfat;       // miniFAT sect array	
 };
-typedef struct ole2_dir * ole2_dir_t;
+
+// error codes
+enum {
+	CFB_NO_ERR = 0,              // no errors
+	CFB_READ_ERR = 0x1,          // error to read stream
+	CFB_WRITE_ERR = 0x2,         // error to write stream
+	CFB_SIG_ERR = 0x4,           // error CFB signature
+	CFB_BYTEORDE_ERR = 0x8,      // error get file byte order
+	CFB_FAT_ERR = 0x10,          // error in FAT stream
+	CFB_MFAT_ERR = 0x20,         // error in miniFAT stream
+	CFB_ROOT_ERR = 0x40,         // error in root dir
+	CFB_HEADER_ERR = 0x80,       // error in file header
+	CFB_DIF_ERR = 0x100,         // error in DIF
+	CFB_ALLOC_ERR = 0x200,       // error in alloc
+};
 
 /*
  * IMP
  */
 
-//check if file is Windows Compound File
-bool _check_ole2_signature(ole2_t ole2){
-	int i;
-	bool res = true;
-	char * ptr = (char *)(ole2->header._abSig);
+//switch bite order
+DWORD dword_sw (DWORD i)
+{
+    unsigned char c1, c2, c3, c4;
+
+	c1 = i & 255;
+	c2 = (i >> 8) & 255;
+	c3 = (i >> 16) & 255;
+	c4 = (i >> 24) & 255;
+
+	return ((int)c1 << 24) + ((int)c2 << 16) + ((int)c3 << 8) + c4;
+}
+
+WORD word_sw (WORD i)
+{
+    unsigned char c1, c2;
+    
+	c1 = i & 255;
+	c2 = (i >> 8) & 255;
+
+	return (c1 << 8) + c2;
+}
+
+void _cfb_dir_sw(cfb_dir * dir){
+	//_ab
+	
+	dir->_cb = word_sw(dir->_cb);
+	dir->_sidLeftSib = dword_sw(dir->_sidLeftSib);
+	dir->_sidRightSib = dword_sw(dir->_sidRightSib);
+	dir->_sidChild = dword_sw(dir->_sidChild);
+	//_clsId
+	dir->_dwUserFlags = dword_sw(dir->_dwUserFlags);
+	//time
+	dir->_sectStart = dword_sw(dir->_sectStart);
+	dir->_ulSize = dword_sw(dir->_ulSize);
+	dir->_dptPropType = word_sw(dir->_dptPropType);
+	
+	
+}
+
+int _cfb_init(struct cfb * cfb, FILE *fp){
+	int error = 0;
+
+	int i; //iterator 
+	
+	off_t p; // offset in stream 
+	
+	cfb->fp   = fp;
+	cfb->biteOrder = false;
+	cfb->fat  = NULL;
+	cfb->mfat = NULL;
+	
+	//get byte order
+	uint32_t byteOrder;
+	fseek(fp, 0x01C, SEEK_SET);	
+	if (fread(&byteOrder, 2, 1, fp) != 1) 
+		return CFB_READ_ERR|CFB_BYTEORDE_ERR;
+
+	if (byteOrder == 0xFFFE){        // no need to change byte order
+	} else if (byteOrder == 0xFEFF){ //need to change byte order
+		cfb->biteOrder = true;
+	} else {                         //error
+		return CFB_BYTEORDE_ERR;
+	}
+
+	// get file header 
+	// Header is always 512 bytes long and is always located at offset zero (0).
+	fseek(fp, 0, SEEK_SET);	
+	if (fread(&cfb->header, 512, 1, fp) != 1)
+		return CFB_READ_ERR|CFB_HEADER_ERR;
+
+	// make byte order change
+	if (cfb->biteOrder){
+		cfb->header._clid.a = dword_sw(cfb->header._clid.a); 
+		cfb->header._clid.b = dword_sw(cfb->header._clid.b); 
+		cfb->header._clid.c = dword_sw(cfb->header._clid.c); 
+		cfb->header._clid.d = dword_sw(cfb->header._clid.d); 
+
+		cfb->header._uMinorVersion = word_sw(cfb->header._uMinorVersion);
+		cfb->header._uDllVersion = word_sw(cfb->header._uDllVersion);
+		cfb->header._uSectorShift = word_sw(cfb->header._uSectorShift);
+		cfb->header._uMiniSectorShift = word_sw(cfb->header._uMiniSectorShift);
+		cfb->header._usReserved = word_sw(cfb->header._usReserved);
+		cfb->header._ulReserved1 = dword_sw(cfb->header._ulReserved1); 
+		cfb->header._ulReserved2 = dword_sw(cfb->header._ulReserved2); 
+		cfb->header._csectFat = dword_sw(cfb->header._csectFat); 
+		cfb->header._sectDirStart = dword_sw(cfb->header._sectDirStart); 
+		cfb->header._signature = dword_sw(cfb->header._signature); 
+		cfb->header._ulMiniSectorCutoff = dword_sw(cfb->header._ulMiniSectorCutoff); 
+		cfb->header._sectMiniFatStart = dword_sw(cfb->header._sectMiniFatStart); 
+		cfb->header._csectMiniFat = dword_sw(cfb->header._csectMiniFat); 
+		cfb->header._sectDifStart = dword_sw(cfb->header._sectDifStart); 
+		cfb->header._csectDif = dword_sw(cfb->header._csectDif); 
+	}
+	
+	///* TODO: check signature */
+	bool signature = true;
+	char * ptr = (char *)(cfb->header._abSig);
 
 	for (i=0; i<8; i++){
-		if ((*ptr != wcbff_signature[i] && *ptr != wcbff_signature_old[i])){
-			res = false;
+		if ((*ptr != cfb_signature[i] && *ptr != cfb_signature_old[i])){
+			signature = false;
 			break;
 		}
 		ptr++;
-	}
+	}	
+
+	if (!signature)
+		return CFB_SIG_ERR;
+
+	uint32_t ch; 
 	
-	return res;
-};
+	//check FAT stream
+	if (cfb->header._csectFat > 0){
+		cfb->fat   = malloc(sizeof(SECT) * cfb->header._csectFat); //FAT array
+		
+		// only 109 FAT SECT in header - other in DIF
+		for (i=0; i < 109; i++){
+			if (cfb->biteOrder){
+				cfb->fat[i] = dword_sw(cfb->header._sectFat[i]);
+			} else {
+				cfb->fat[i] = cfb->header._sectFat[i];
+			}
+		}
 
-int _read_ole2_header(FILE * fp, struct StructuredStorageHeader * header){
-	int i;
+/*
+ * double-indirect file allocation table (DIFAT): A structure that is used to locate FAT sectors 
+ * in a compound file.
+ *
+ *		FAT Sector Location (variable): This field specifies the FAT sector number in a DIFAT.
+ * If Header Major Version is 3, there MUST be 127 fields specified to fill a 512-byte sector 
+ * minus the "Next DIFAT Sector Location" field.
+ *		If Header Major Version is 4, there MUST be 1,023 fields specified to fill a 4,096-byte 
+ *sector minus the "Next DIFAT Sector Location" field.
+*/
+		int n = 127; //number of FAT sectors in DIF
+		if (cfb->header._uDllVersion == 4)
+			n = 1023;
 
-	//read 512 bites
-	size_t size = fread(header, 1, 512, fp);
-	if (size == 512)
-		return 0;
+		// check DIF
+		if (cfb->header._csectDif > 0){
+			// get first dif
+			p = 512 + cfb->header._sectDifStart;
+			fseek(fp, p, SEEK_SET);
+			
+			//read FAT SECTs
+			int d = 0; // count sectors
+			while(fread(&ch, 4, 1, fp) == 1){
+				if (cfb->biteOrder)
+					ch = dword_sw(ch);
+				
+				if (ch == ENDOFCHAIN || ch == EOF)
+					break;
 
-	//free header
-	free(header);
-	return -1;
+				if (d == n) { //go to next DIF
+					p = ch << cfb->header._uSectorShift;
+					fseek(fp, p, SEEK_SET);
+					if (fread(&ch, 4, 1, fp) != 1){
+						error = CFB_READ_ERR|CFB_DIF_ERR;
+						break;
+					}
+					if (cfb->biteOrder)
+						ch = dword_sw(ch);
+					i = 0;
+				}
+				cfb->fat[i++] = ch;
+				d++;
+			}
+		}
+	}
+
+	// get root dir
+	p = 512 + (cfb->header._sectDirStart << cfb->header._uSectorShift); 
+	fseek(fp, p, SEEK_SET);
+	if (fread(&cfb->root, sizeof(cfb->root), 1, fp) != 1){
+		return CFB_READ_ERR|CFB_ROOT_ERR;
+	}
+
+	if (cfb->biteOrder)
+		_cfb_dir_sw(&cfb->root);
+
+	//check miniFAT stream
+	if (cfb->header._csectMiniFat > 0){
+		cfb->mfat = malloc(cfb->root._ulSize); //miniFat sectors array
+		if(!cfb->mfat)
+			return CFB_MFAT_ERR|CFB_ALLOC_ERR;
+
+		// get miniFAT stream SECT chain - located in ROOT DIR
+		p = 512 + (cfb->root._sectStart << cfb->header._uSectorShift);
+		fseek(fp, p, SEEK_SET);
+		for (i = 0; i < cfb->header._csectMiniFat; ++i) {
+			if (fread(&ch, 4, 1, fp) != 1){
+				error = CFB_READ_ERR|CFB_ROOT_ERR|CFB_MFAT_ERR;
+				break;
+			}
+			if (cfb->biteOrder)
+				ch = dword_sw(ch);
+
+			if (fwrite(&ch, 4, 1, fp) != 1){
+				error = CFB_WRITE_ERR|CFB_ROOT_ERR|CFB_MFAT_ERR;
+				break;
+			}
+		}
+	}
+
+	return error;
 }
+
+int cfb_open(struct cfb * cfb, const char * filename){
+	FILE * newfile;
+	FILE * fp = fopen(filename, "r");
+	if (!fp)
+		return -1;
+
+	if (fseek(fp,0,SEEK_SET) == -1) {
+		if ( errno == ESPIPE ) {
+			//We got non-seekable file, create temp file
+			if((newfile=tmpfile()) == NULL) {
+				return -1;
+			}
+			int ch;
+			while ((ch = fgetc(fp)) != EOF)
+				fputc(ch, newfile);
+			
+			fclose(fp);
+			fseek(newfile,0,SEEK_SET);
+		} else {
+			return -1;
+		}
+	} else {
+		newfile=fp;
+	}	
+	
+	return _cfb_init(cfb, newfile); 
+};
 
 //return len of utf8 string
 size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
@@ -406,292 +618,57 @@ size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
 	return i;
 }
 
-FILE * _ole2_get_fat_stream(ole2_t ole2, ULONG start, ULONG size){
-
-	FILE * stream = tmpfile();
-
-	int n;
-	//get FAT number
-	for (n = 0; n < ole2->FATsc; ++n) {
-		SECT FATn = ole2->FAT[n];	
-		if (start <= (FATn << ole2->header._uSectorShift))
-			break;
-	}
-
-	//seek to start
-	fseek(ole2->fp, start, SEEK_SET);
-
-	ULONG i = 0;
-	//copy data
-	for(i=0; i<size; i+=sizeof(SECT)){
-		if (i==size){
-			fputc(EOF, stream);
-			break;
-		}
-
-		SECT ch;
-		fread(&ch, 1, sizeof(SECT), ole2->fp);
-
-		if ((int)ch == EOF){
-			fputc(EOF, stream);
-			break;
-		}
-
-		///* BYTE ENDIAN check:  <04-11-22, yourname> */
-		///* FAT chain append check:  <04-11-22, yourname> */
-		if (ch == ENDOFCHAIN){
-			fseek(ole2->fp, ole2->FAT[++n], SEEK_SET);
-			fread(&ch, 1, sizeof(SECT), ole2->fp);
-		}
-
-		fwrite(&ch, 1,  sizeof(SECT), stream);
-	}
-
-	fseek(stream, 0, SEEK_SET);
-	return stream;
-}
-
-FILE * _ole2_get_minifat_stream(ole2_t ole2, ULONG start, ULONG size){
-
-	FILE * stream = tmpfile();
-
-	int n;
-	//get FAT number
-	for (n = 0; n < ole2->miniFATsc; ++n) {
-		SECT miniFATn = ole2->miniFAT[n];	
-		if (start <= (miniFATn << ole2->header._uMiniSectorShift))
-			break;
-	}
-
-	//seek to start
-	fseek(ole2->fp, start, SEEK_SET);
-
-	ULONG i = 0;
-	//copy data
-	for(i=0; i<size; i+=sizeof(SECT)){
-		if (i==size){
-			fputc(EOF, stream);
-			break;
-		}
-
-		SECT ch;
-		fread(&ch, 1, sizeof(SECT), ole2->fp);
-
-		if ((int)ch == EOF){
-			fputc(EOF, stream);
-			break;
-		}
-
-		///* BYTE ENDIAN check:  <04-11-22, yourname> */
-		///* FAT chain append check:  <04-11-22, yourname> */
-		if (ch == ENDOFCHAIN){
-			fseek(ole2->fp, ole2->FAT[++n], SEEK_SET);
-			fread(&ch, 1, sizeof(SECT), ole2->fp);
-		}
-
-		fwrite(&ch, 1,  sizeof(SECT), stream);
-	}
-
-	fseek(stream, 0, SEEK_SET);
-	return stream;
-}
-
-
-ole2_t ole2_init(FILE * fp){
-
-	int i;
-	size_t len;
-
-	//allocate
-	ole2_t ole2 = malloc(sizeof(ole2_t));
-	if (!ole2)
-		return NULL;
-	
-	//init with zeros
-	memset(ole2, 0, sizeof(struct ole2));
-
-	ole2->fp = fp;
-
-	//init header
-	if (_read_ole2_header(fp, &ole2->header)){
-		free(ole2);
-		return NULL;
-	}
-	
-	if (!_check_ole2_signature(ole2)){ //not WCBF file 
-		free(ole2);
-		return NULL;
-	}
-
-	ole2->sizeOfDir = sizeof(struct StructuredStorageDirectoryEntry);
-	
-	ole2->FATs = 1<<ole2->header._uSectorShift;
-	ole2->miniFATs = 1<<ole2->header._uMiniSectorShift;
-	
-	ole2->startOfDir = ole2->header._sectDirStart << ole2->header._uSectorShift;
-	ole2->startOfMiniFat = ole2->header._sectMiniFatStart << ole2->header._uMiniSectorShift;
-
-	ole2->FAT = NULL;
-	ole2->FATsc = 0;
-	ole2->miniFAT = NULL;
-	ole2->miniFATsc = 0;
-
-	//FAT sectors count
-	ole2->FATsc = ole2->header._csectFat;
-	
-	if (ole2->FATsc > 0){
-		//FAT sectors array
-		ole2->FAT = malloc(sizeof(ole2->FAT) * ole2->FATsc);
-		if (ole2->FAT == NULL)
-			return NULL;
-
-		//fill array
-		for (i = 0; (i < ole2->FATsc); ++i)
-			ole2->FAT[i] = ole2->header._sectFat[i];
-
-		//get DiffSectors
-		SECT diff_off = ole2->header._sectDifStart;
-		for (i = 0; i < ole2->header._csectDif; ++i) {
-			fseek(ole2->fp, diff_off * ole2->FATs, SEEK_SET);
-			SECT sect;
-			fread(&sect, 1, sizeof(SECT), ole2->fp);
-			while(sect != ENDOFCHAIN){
-				//realloc FAT array
-				void * ptr = 
-						realloc(ole2->FAT, sizeof(ole2->FAT) * (ole2->FATsc + 1));
-				if (!ptr)
-					return NULL;
-				ole2->FAT = ptr;
-				//add sect to FAT array
-				ole2->FAT[ole2->FATsc++] = sect;
-
-				//reed next
-				fread(&sect, 1, sizeof(SECT), ole2->fp);
-			}	
-			//get pointer to next Dif
-			fread(&sect, 1, sizeof(SECT), ole2->fp);
-			diff_off = sect;
-		}
-	}
-
-	//niniFAT sectors count
-	ole2->miniFATsc = ole2->header._csectFat;
-	
-	if (ole2->miniFATsc > 0){	
-		//minFAT sectors array
-		if (ole2->miniFATsc > 0){
-			ole2->miniFAT = malloc(sizeof(ole2->miniFAT) * ole2->miniFATsc);
-			if (ole2->miniFAT == NULL)
-				return NULL;
-		}
-
-		//get ministream from Root Directory
-		fseek(ole2->fp, 512 + ole2->startOfDir, SEEK_SET); 
-		struct ole2_dir root;
-		len = fread(&root, 1, ole2->sizeOfDir, ole2->fp);
-		if (len != ole2->sizeOfDir) //error to read file
-			return NULL;
-
-		//get start of ministream
-		ULONG size = root.dir._ulSize;
-		ULONG start;
-		//check FAT or miniFAT
-		if (size < ole2->miniFATs){
-			//use miniFAT
-			start = 512 + 
-					ole2->startOfMiniFat +
-					(root.dir._sectStart << ole2->header._uMiniSectorShift);
-		} else {
-			//use FAT
-			start = 512 + 
-					(root.dir._sectStart << ole2->header._uSectorShift);
-		}	
-
-		//get DiffSectors
-		fseek(ole2->fp, start, SEEK_SET);
-		SECT sect;
-		fread(&sect, 1, sizeof(SECT), ole2->fp);
-		for (i = 0; i < ole2->miniFATsc; ++i) {
-			if (sect == ENDOFCHAIN)
-				break;
-			ole2->miniFAT[i] = sect;
-			fread(&sect, 1, sizeof(SECT), ole2->fp);
-		}		
-	}
-
-
-	return ole2;
-}
-
-
-ole2_dir_t _ole2_dir_init(ole2_t ole2, SID sid){
+int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
+		int (*callback)(void * user_data, cfb_dir dir))
+{
 	int i;
 	
-	//allocate dir
-	ole2_dir_t dir = malloc(sizeof(struct ole2_dir));
-	if (!dir)
-		return NULL;	
-
-	//init with zeros
-	memset(dir, 0, sizeof(struct ole2_dir));
-
 	//goto dir data
-	fseek(ole2->fp, 512 + ole2->startOfDir + sid*ole2->sizeOfDir, SEEK_SET);
-	
+	ULONG p = 512 + sid*sizeof(cfb_dir) + (cfb->header._sectDirStart << cfb->header._uSectorShift);
+	fseek(cfb->fp, p, SEEK_SET);
+
 	//copy dir data
-	int len = fread(&dir->dir, 1, ole2->sizeOfDir, ole2->fp);
-	if (len != ole2->sizeOfDir){
-		free(dir);
-		return NULL;
-	}
+	cfb_dir dir;
+	/*if (fread(&dir, sizeof(cfb_dir), 1, cfb->fat) != 1)*/
+		/*return -1;*/
 
-	dir->ole2 = ole2;
+	fread(&dir, sizeof(cfb_dir), 1, cfb->fp);
 
-	return dir;
-}
-
-ole2_dir_t ole2_dir_child(ole2_dir_t dir){
-	if (!dir->dir._sidChild) //dir has no childs
-		return NULL;
+	///* TODO: byte order check */
 	
-	ole2_dir_t child = _ole2_dir_init(dir->ole2, dir->dir._sidChild);
-	return child;	
+	if (callback)
+		callback(user_data, dir);
+
+	return 0;
 }
 
-ole2_dir_t wcbff_dir_left(ole2_dir_t dir){
-	if (!dir->dir._sidLeftSib) //dir has no left
-		return NULL;
-	
-	ole2_dir_t left = _ole2_dir_init(dir->ole2, dir->dir._sidLeftSib);
-	return left;	
-}
-
-ole2_dir_t wcbff_dir_right(ole2_dir_t dir){
-	if (!dir->dir._sidRightSib) //dir has no right
-		return NULL;
-	
-	ole2_dir_t right = _ole2_dir_init(dir->ole2, dir->dir._sidRightSib);
-	return right;	
-}
-
-char * ole2_dir_name(ole2_dir_t dir){
-	char * name = malloc(2*dir->dir._cb);
+char * cfb_dir_name(cfb_dir * dir){
+	char * name = malloc(2*dir->_cb);
 	if (!name)
 		return NULL;
 
-	WORD * ab = (WORD*)&(dir->dir._ab);
+	WORD * ab = (WORD*)&(dir->_ab);
 
-	if (!_utf16_to_utf8(ab, dir->dir._cb, name))
+
+	if (!_utf16_to_utf8(ab, dir->_cb, name))
 		return NULL;
 
 	return name;
 }
 
-ole2_dir_t _ole2_dir_find(ole2_dir_t dir, const char * name){
+int cfb_dir_callback(void * user_data, cfb_dir dir){
+	cfb_dir * _dir = user_data;
+	*_dir = dir;
+	return 0;
+}
+
+int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
+		int (*callback)(void * user_data, cfb_dir dir))
+{
 	if(!dir)
-		return NULL;
+		return -1;
 	//check name
-	char * dirname = ole2_dir_name(dir);
+	char * dirname = cfb_dir_name(dir);
 	int res;
 	size_t name_len = strlen(name);
 	size_t dirname_len = strlen(dirname);
@@ -703,107 +680,144 @@ ole2_dir_t _ole2_dir_find(ole2_dir_t dir, const char * name){
 		res = strcmp(name, dirname);
 	free(dirname);
 	if (res == 0)
-		return dir;
+		callback(user_data, *dir);
 	if (res < 0){
 		//check left
-		if (dir->dir._sidLeftSib > 0){
-			ole2_dir_t new_dir =  _ole2_dir_init(dir->ole2, dir->dir._sidLeftSib);
-			free(dir);
-			return _ole2_dir_find(new_dir, name);
+		if (dir->_sidLeftSib != -1){
+			cfb_dir new_dir;
+			cfb_dir_by_sid(cfb, dir->_sidLeftSib, &new_dir, cfb_dir_callback);
+			return _cfb_dir_find(cfb, &new_dir, name, user_data, callback);
 		}
 	} else {
 		//check right
-		if (dir->dir._sidRightSib > 0){
-			ole2_dir_t new_dir =  _ole2_dir_init(dir->ole2, dir->dir._sidRightSib);
-			free(dir);
-			return _ole2_dir_find(new_dir, name);
+		if (dir->_sidRightSib != -1){
+			cfb_dir new_dir;
+			cfb_dir_by_sid(cfb, dir->_sidRightSib, &new_dir, cfb_dir_callback);
+			return _cfb_dir_find(cfb, &new_dir, name, user_data, callback);
 		}	
 	}
-	return NULL;
+	return 0;
 }
 
-
-#define wcbff_get_dir_id(wcbff, sid) _wcbff_dir_init(wcbff, sid)
-
-ole2_dir_t ole2_get_dir(ole2_t ole2, const char * name){
-	ole2_dir_t root = _ole2_dir_init(ole2, 0);
-	ole2_dir_t find = _ole2_dir_find(ole2_dir_child(root), name);
-	
-	//free root
-	free(root);
-	return find;
+int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
+	return cfb_dir_by_sid(cfb, sid, dir, cfb_dir_callback);
 }
 
-#define ole2_dir(ole2, arg)\
+int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
+		int (*callback)(void * user_data, cfb_dir dir))
+{
+	cfb_dir dir;
+	cfb_get_dir_by_sid(cfb, &dir, cfb->root._sidChild);
+	return _cfb_dir_find(cfb, &dir, name, user_data, callback);
+}
+
+int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
+	return cfb_dir_by_name(cfb, name, dir, cfb_dir_callback);
+}
+
+#define cfb_get_dir(cfb, dir, arg)\
 	_Generic((arg), \
-			char*: ole2_get_dir, \
-			int:   _ole2_dir_init \
-	)((ole2), (arg))	
+			char*: cfb_get_dir_by_name, \
+			int:   cfb_get_dir_by_sid \
+	)((cfb), (dir), (arg))	
 
-FILE * ole2_dir_stream(ole2_dir_t dir) {
-	ULONG size = dir->dir._ulSize;
-	
-	ULONG start;
+FILE * cfb_dir_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
+	ULONG i; // iterator
+	ULONG size = dir->_ulSize;
+	SECT s = dir->_sectStart;
+	ULONG off; //offset
+	int max_size;	
+
+	int p; // position in FAT/miniFAT chain
 
 	//check FAT or miniFAT
-	if (size < dir->ole2->miniFATs){
+	if (size < cfb->header._ulMiniSectorCutoff){
 		//use miniFAT
-		start = 512 + 
-				dir->ole2->startOfMiniFat +
-				dir->dir._sectStart * dir->ole2->miniFATs;
-		return _ole2_get_minifat_stream(dir->ole2, start, size); 
-	} else {
+		off = s << cfb->header._uMiniSectorShift;
+		max_size = 1 << cfb->header._uMiniSectorShift;
+		for (p = 0; p < cfb->header._csectMiniFat; ++p)
+			if (cfb->mfat[p] == s)
+				break;
+	}
+	else {
 		//use FAT
-		start = 512 + 
-				dir->dir._sectStart * dir->ole2->FATs;
-		return _ole2_get_fat_stream(dir->ole2, start, size); 
+		off = ++s << cfb->header._uSectorShift;
+		max_size = 1 << cfb->header._uSectorShift;
+		for (p = 0; p < cfb->header._csectFat; ++p)
+			if (cfb->fat[p] == s)
+				break;		
+	} 
+
+	//seek to start
+	fseek(cfb->fp, off, SEEK_SET);
+
+	FILE * stream = tmpfile();
+
+	//copy data
+	uint32_t ch;
+	int d; // size iterator in sector
+	for (i = 0; i < size; ++i, ++d){
+		//read data
+		if (fread(&ch, 4, 1, cfb->fp) != 1)
+			return NULL;
+
+		if (ch == EOF)
+			break;
+
+		if (d == max_size){
+			// get next FAT/miniFAT
+			if (size < cfb->header._ulMiniSectorCutoff)
+				fseek(cfb->fp, cfb->mfat[++p] << cfb->header._uMiniSectorShift, SEEK_SET);
+			else 
+				fseek(cfb->fp, (cfb->fat[++p] + 1) << cfb->header._csectFat, SEEK_SET);
+			d = 0;
+		}
+
+		//write data
+		if (fwrite(&ch, 4, 1, stream) != 1)
+			return NULL;
 	}
 
-};
+	fseek(stream, 0, SEEK_SET);
+	return stream;	
+}
 
-ole2_t ole2_open(const char * filename){
-	FILE * newfile;
-	FILE * fp = fopen(filename, "r");
-	if (!fp)
-		return NULL;
-
-	if (fseek(fp,0,SEEK_SET) == -1) {
-		if ( errno == ESPIPE ) {
-			//We got non-seekable file, create temp file
-			if((newfile=tmpfile()) == NULL) {
-				return NULL;
-			}
-			int ch;
-			while ((ch = fgetc(fp)) != EOF)
-				fputc(ch, newfile);
-			
-			fclose(fp);
-			fseek(newfile,0,SEEK_SET);
-		} else {
-			return NULL;
-		}
-	} else {
-		newfile=fp;
-	}	
+FILE * cfb_dir_get_stream_by_sid(struct cfb * cfb, SID sid) {
+	cfb_dir dir;
+	if (cfb_get_dir_by_sid(cfb, &dir, sid))
+		return NULL; //no dir
 	
-	return ole2_init(newfile); 
+	return cfb_dir_get_stream_by_dir(cfb, &dir);
 };
 
-int ole2_dirs(ole2_t ole2, void * user_data,
-			int(*callback)(void * user_data, ole2_dir_t dir))
+FILE * cfb_dir_get_stream_by_name(struct cfb * cfb, const char * name) {
+	cfb_dir dir;
+	if (cfb_get_dir_by_name(cfb, &dir, name))
+		return NULL; //no dir
+	
+	return cfb_dir_get_stream_by_dir(cfb, &dir);
+}
+
+#define cfb_dir_get_stream(cfb, arg)\
+	_Generic((arg), \
+			char*:       cfb_dir_get_stream_by_name, \
+			int:         cfb_dir_get_stream_by_sid, \
+			cfb_dir *:   cfb_dir_get_stream_by_dir \
+	)((cfb), (arg))	
+
+int cfb_get_dirs(struct cfb * cfb, void * user_data,
+			int(*callback)(void * user_data, cfb_dir dir))
 {
-	int i=0;
-	ole2_dir_t dir = _ole2_dir_init(ole2, i++);
-	while(dir && dir->dir._ab[0]){
+	int i=0, c;
+	cfb_dir dir;
+	c = cfb_get_dir_by_sid(cfb, &dir, i++);
+	while(c == 0 && dir._ab[0]){
 		if (callback){
 			if (callback(user_data, dir)){
-				free(dir);
 				return 1;
 			}
 		}
-		ole2_dir_t ptr = dir;
-		dir = _ole2_dir_init(ole2, i++);
-		free(ptr);
+		c = cfb_get_dir_by_sid(cfb, &dir, i++);
 	}
 
 	return 0;
