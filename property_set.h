@@ -324,11 +324,24 @@ int property_set_get(
 		}
 
 		//copy section to buf
-		uint32_t * buf = malloc(pshead.cbSection*4);
+		char * buf = malloc(pshead.cbSection*4);
 		if (!buf)
 			return PSET_ERR_ALLOC;
 		fseek(fp, soff.dwOffset, SEEK_SET);
-		fread(buf, 1, pshead.cbSection, fp);				
+		fread(buf, 1, pshead.cbSection*4, fp);				
+		if (byteOrder){
+			for (i = 0; i < pshead.cbSection*4;) {
+				char c1 = buf[i];	
+				char c2 = buf[i+1];	
+				char c3 = buf[i+2];	
+				char c4 = buf[i+3];	
+				buf[i] = c4;
+				buf[i+1] = c3;
+				buf[i+2] = c2;
+				buf[i+3] = c1;
+				i+=4;
+			}
+		}		
 
 		//for each property
 		for (k = 0; k < pshead.cProperties; ++k) {
@@ -351,7 +364,7 @@ int property_set_get(
 				ptv.dwType = PS_DWORD_SW(ptv.dwType);
 
 			//pointer to value
-			uint32_t * ptr = (uint32_t *)(buf + poff.dwOffset);
+			uint32_t * ptr = (uint32_t *)(buf + poff.dwOffset + 4);
 
 			//callback
 			if (callback)
