@@ -575,7 +575,7 @@ int cfb_open(struct cfb * cfb, const char * filename){
 //return len of utf8 string
 size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
 	int i, k = 0;
-	for (i = 0; i < len/2; ++i) {
+	for (i = 0; i < len; ++i) {
 		WORD wc = utf16[i];
 		if (wc > 0x80){ //2-byte
 			//get first byte - first 5 bit 00000111 11000000
@@ -678,9 +678,18 @@ char * cfb_dir_name(cfb_dir * dir){
 	char * name = malloc(2*dir->_cb);
 	if (!name)
 		return NULL;
-
-	WORD * ab = (WORD*)&(dir->_ab);
-
+	
+	int size = dir->_cb/2;
+	WORD ab[size];
+	int i, c;
+	for (i = 0, c = 0; i < dir->_cb; ++i, ++c) {
+		char ch0 = dir->_ab[i++];	
+		char ch1 = dir->_ab[i];	
+		if (ch1 == 0)
+			ab[c] = ch0;
+		else
+			ab[c] = (ch0 << 8) + ch1;
+	}
 
 	if (!_utf16_to_utf8(ab, dir->_cb, name))
 		return NULL;
