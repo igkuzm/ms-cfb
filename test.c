@@ -6,8 +6,9 @@
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
-#include "ole2.h"
-#include "../libdoc2/property_set.h"
+#include "cfb.h"
+#include "property_set.h"
+#include "debug.h"
 
 #include <iconv.h>
 #include <stdint.h>
@@ -91,7 +92,7 @@ int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value
 	return 0;
 };
 
-int callback(void * user_data, cbf_dir dir){
+int callback(void * user_data, cfb_dir dir){
 	printf("DIR AB: %x\n", dir._ab[0]);
 
 	return 0;
@@ -100,14 +101,24 @@ int callback(void * user_data, cbf_dir dir){
 int main(int argc, char *argv[])
 {
 
-	struct cbf cbf;
-	int error = cbf_open(&cbf, "1.doc");
+	struct cfb cfb;
+	int error = cfb_open(&cfb, "1.doc");
 	if (error)
 		printf("ERROR OPEN FILE: %x\n", error);
-	
-	printf("ROOT DIR: %s\n", cbf_dir_name(&cbf.root));
 
-	FILE *si = cbf_dir_get_stream_by_name(&cbf, "\005SummaryInformation");
+	print_cfb_header(&cfb);
+
+	print_fat_stream(&cfb);
+	print_mfat_stream(&cfb);
+	print_dir(&cfb.root);
+	
+	cfb_dir dir;
+	cfb_get_dir_by_name(&cfb, &dir, "\005SummaryInformation");
+	print_dir(&dir);
+	
+	/*printf("ROOT DIR: %s\n", cfb_dir_name(&cfb.root));*/
+
+	/*FILE *si = cfb_dir_get_stream_by_name(&cfb, "\005SummaryInformation");*/
 
 
 	/*cbf_dir dir;*/
@@ -123,8 +134,7 @@ int main(int argc, char *argv[])
 	
 	/*FILE * stream = ole2_dir_stream(dir);	*/
 
-	property_set_get(si, NULL, prop_cb);
+	/*property_set_get(si, NULL, prop_cb);*/
 
 	return 0;
 }
-
