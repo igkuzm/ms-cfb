@@ -32,7 +32,7 @@ Header only library to read CFB file and get streams.
 ```
 
 ### property_set.h 
-Header only library to read MS-ADTS Property Set file and get list of properties.
+Header only library to MS Property Set file and get list of properties.
 ```c
 	#include "property_set.h"
 	
