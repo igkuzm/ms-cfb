@@ -1,4 +1,4 @@
-# Windows Compound Binary File Format C library
+# Compound Binary File Format C library
 
 ![ico](ico.png)
 
