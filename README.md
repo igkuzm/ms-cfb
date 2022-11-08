@@ -11,3 +11,59 @@ A Compound File is made up of a number of virtual streams. These are collections
 All allocations of space within a Compound File are done in units called sectors. The size of a sector is definable at creation time of a Compound File, but for the purposes of this document will be 512 bytes. A virtual stream is made up of a sequence of sectors.
 The Compound File uses several different types of sector: Fat, Directory, Minifat, DIF, and Storage. A separate type of 'sector' is a Header, the primary difference being that a Header is always 512 bytes long (regardless of the sector size of the rest of the file) and is always located at offset zero (0). With the exception of the header, sectors of any type can be placed anywhere within the file. The function of the various sector types is discussed below.
 In the discussion below, the term SECT is used to describe the location of a sector within a virtual stream (in most cases this virtual stream is the file itself). Internally, a SECT is represented as a ULONG.
+
+### cfb.h 
+Header only library to read CFB file and get streams.
+```c
+	#include "cfb.h"
+	
+	int main(int argc, char *argv[]){
+		struct cfb cfb;
+		if(cfb_open(&cfb, "1.doc") == 0){
+			FILE *summary = cfb_get_stream(&cfb, "\005SummaryInformation");
+			
+			// do your magic with file
+			
+			fclose(summary);
+			cfb_close(&cfb);
+		}
+	}
+	
+```
+
+### property_set.h 
+Header only library to read MS-ADTS Property Set file and get list of properties.
+```c
+	#include "property_set.h"
+	
+	int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value){
+		char * str = NULL;
+		
+		if (dwType == 30){
+			char buf[BUFSIZ];
+			strncpy(buf, (char*)value + 4, BUFSIZ);
+			str = buf;
+		}
+		else if (dwType == 2){
+			char buf[10];
+			sprintf(buf, "%d", *(uint16_t*)value);
+			str = buf;
+		}
+		else if (dwType == 3){
+			char buf[10];
+			sprintf(buf, "%d", *(uint32_t*)value);
+			str = buf;
+		}
+
+		printf("PROP id: %d, type: %d, value: %s\n", propid, dwType, str);
+		return 0;
+	}
+	
+	int main(int argc, char *argv[]){
+			FILE *summary; // File stream with property set list
+			
+			property_set_get(summary, NULL, prop_cb);
+		}
+	}
+	
+```

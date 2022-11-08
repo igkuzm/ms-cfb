@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 07.11.2022
+ * Last Modified Date: 08.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -762,7 +762,7 @@ int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
 			int:   cfb_get_dir_by_sid \
 	)((cfb), (dir), (arg))	
 
-FILE * cfb_dir_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
+FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	ULONG i; // iterator
 	ULONG size = dir->_ulSize;
 	SECT s = dir->_sectStart;
@@ -823,27 +823,27 @@ FILE * cfb_dir_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	return stream;	
 }
 
-FILE * cfb_dir_get_stream_by_sid(struct cfb * cfb, SID sid) {
+FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
 	cfb_dir dir;
 	if (cfb_get_dir_by_sid(cfb, &dir, sid))
 		return NULL; //no dir
 	
-	return cfb_dir_get_stream_by_dir(cfb, &dir);
+	return cfb_get_stream_by_dir(cfb, &dir);
 };
 
-FILE * cfb_dir_get_stream_by_name(struct cfb * cfb, const char * name) {
+FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
 	cfb_dir dir;
 	if (cfb_get_dir_by_name(cfb, &dir, name))
 		return NULL; //no dir
 	
-	return cfb_dir_get_stream_by_dir(cfb, &dir);
+	return cfb_get_stream_by_dir(cfb, &dir);
 }
 
-#define cfb_dir_get_stream(cfb, arg)\
+#define cfb_get_stream(cfb, arg)\
 	_Generic((arg), \
-			char*:       cfb_dir_get_stream_by_name, \
-			int:         cfb_dir_get_stream_by_sid, \
-			cfb_dir *:   cfb_dir_get_stream_by_dir \
+			char*:       cfb_get_stream_by_name, \
+			int:         cfb_get_stream_by_sid, \
+			cfb_dir *:   cfb_get_stream_by_dir \
 	)((cfb), (arg))	
 
 int cfb_get_dirs(struct cfb * cfb, void * user_data,
@@ -862,6 +862,14 @@ int cfb_get_dirs(struct cfb * cfb, void * user_data,
 	}
 
 	return 0;
+}
+
+void cfb_close(struct cfb * cfb){
+	if (cfb->fat)
+		free(cfb->fat);
+	if (cfb->mfat)
+		free(cfb->mfat);
+	fclose(cfb->fp);
 }
 
 #ifdef __cplusplus
