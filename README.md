@@ -1,5 +1,7 @@
 # Windows Compound Binary File Format C library
 
+![ico](ico.png)
+
 ### Overview
 
 A Compound File is made up of a number of virtual streams. These are collections of data that behave as a linear stream, although their on-disk format may be fragmented. Virtual streams can be user data, or they can be control structures used to maintain the file. Note that the file itself can also be considered a virtual stream.
