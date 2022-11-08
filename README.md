@@ -10,6 +10,7 @@ A Compound File is made up of a number of virtual streams. These are collections
 
 All allocations of space within a Compound File are done in units called sectors. The size of a sector is definable at creation time of a Compound File, but for the purposes of this document will be 512 bytes. A virtual stream is made up of a sequence of sectors.
 The Compound File uses several different types of sector: Fat, Directory, Minifat, DIF, and Storage. A separate type of 'sector' is a Header, the primary difference being that a Header is always 512 bytes long (regardless of the sector size of the rest of the file) and is always located at offset zero (0). With the exception of the header, sectors of any type can be placed anywhere within the file. 
+
 The CFB is used in MS Office .doc, .xls, .ppt files.
 
 ### cfb.h 
