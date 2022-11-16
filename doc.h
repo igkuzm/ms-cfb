@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 15.11.2022
+ * Last Modified Date: 16.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -81,18 +81,6 @@ extern "C"{
  * bytes in a binary word from right to left, which is referred to as little-endian. The underlying 
  * file format enumerations, objects, and records are little-endian
  */
-
-
-/*
- * function `property_set_get`
- * Read properties from standard common property set file, execute callback for each found
- * property. Return error code. To stop function execution you may return non 0 in callback
- * function. 
- */
-static int 
-property_set_get(FILE * fp, void * user_data,
-	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value));
-
 
 /*
  * Error codes
@@ -388,8 +376,8 @@ typedef struct FibRgFcLcb97
 	uint32_t fcStshfOrig;  //(4 bytes): This value is undefined and MUST be ignored. 
 	uint32_t lcbStshfOrig; //(4 bytes): This value is undefined and MUST be ignored. 
 	uint32_t fcStshf;      //(4 bytes): An unsigned integer that specifies an offset in the Table 
-	                       //Stream. An STSH that specifies the style sheet for this document begins at 
-						   //this offset. 
+	                       //Stream. An STSH that specifies the style sheet for this document 
+						   //begins at this offset. 
 	uint32_t lcbStshf;     //(4 bytes): An unsigned integer that specifies the size, in bytes, of the 
 						   //STSH that begins at offset fcStshf in the Table Stream. This MUST be a 
 						   //nonzero value. 
@@ -400,6 +388,271 @@ typedef struct FibRgFcLcb97
 						   //is undefined and MUST be ignored. 
 	uint32_t lcbPlcffndRef;//(4 bytes): An unsigned integer that specifies the size, in bytes, of the 
 						   //PlcffndRef that begins at offset fcPlcffndRef in the Table Stream. 
+	uint32_t fcPlcffndTxt; //(4 bytes): An unsigned integer that specifies an offset in the Table 
+						   //Stream. A PlcffndTxt begins at this offset and specifies the locations 
+						   //of each block of footnote text in the Footnote Document. 
+						   //If lcbPlcffndTxt is zero, fcPlcffndTxt is undefined and MUST be ignored. 
+	uint32_t lcbPlcffndTxt;//(4 bytes):  An unsigned integer that specifies the size, in bytes, 
+						   //of the PlcffndTxt that begins at offset fcPlcffndTxt in the Table Stream. 
+						   //lcbPlcffndTxt MUST be zero if FibRgLw97.ccpFtn is zero, and MUST be 
+						   //nonzero if FibRgLw97.ccpFtn is nonzero.
+	uint32_t fcPlcfandRef; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+						   //Stream. A PlcfandRef begins at this offset and specifies the dates, 
+						   //user initials, and locations of comments in the Main Document. If 
+						   //lcbPlcfandRef is zero, fcPlcfandRef is undefined and MUST be ignored.
+	uint32_t lcbPlcfandRef;//(4 bytes):  An unsigned integer that specifies the size, in bytes, 
+						   //of the PlcfandRef at offset fcPlcfandRef in the Table Stream. 
+	uint32_t fcPlcfandTxt; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+						   //Stream. A PlcfandTxt begins at this offset and specifies the locations 
+						   //of comment text ranges in the Comment Document. If lcbPlcfandTxt is 
+						   //zero, fcPlcfandTxt is undefined, and MUST be ignored. 
+	uint32_t lcbPlcfandTxt;//(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+						   //the PlcfandTxt at offset fcPlcfandTxt in the Table Stream. 
+						   //lcbPlcfandTxt MUST be zero if FibRgLw97.ccpAtn is zero, and MUST be 
+						   //nonzero if FibRgLw97.ccpAtn is nonzero.
+	uint32_t fcPlcfSed;    //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+						   //Stream. A PlcfSed begins at this offset and specifies the locations of
+						   //property lists for each section in the Main Document. If lcbPlcfSed is
+						   //zero, fcPlcfSed is undefined and MUST be ignored.
+	uint32_t lcbPlcfSed;   //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the PlcfSed that begins at offset fcPlcfSed in the Table Stream. 
+	uint32_t fcPlcPad;     //(4 bytes):  This value is undefined and MUST be ignored. 
+	uint32_t lcbPlcPad;    //(4 bytes):  This value is undefined and MUST be ignored. 
+	uint32_t fcPlcfPhe;    //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+						   //Stream. A Plc begins at this offset and specifies version-specific 
+						   //information about paragraph height. This Plc SHOULD NOT be emitted
+						   //and SHOULD be ignored. 
+						   //Word 97, Word 2000, and Word 2002 emit this information when 
+						   //performing an incremental save.  Office Word 2003, Office Word 2007, 
+						   //Word 2010, and Word 2013 do not emit this information
+						   //Word 97 reads this information if FibBase.nFib is 193.  Word 2000 
+						   //reads this information if FibRgCswNew.nFibNew is 217.  
+						   //Word 2002 reads this information if FibRgCswNew.nFibNew is 257.  
+						   //Office Word 2003, Office Word 2007, Word 2010, and Word 2013 do not 
+						   //read this information
+	uint32_t lcbPlcfPhe;   //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+						   //the Plc at offset fcPlcfPhe in the Table Stream. 
+	uint32_t fcSttbfGlsy;  //(4 bytes):  An unsigned integer that specifies an offset in the Table
+						   //Stream. A SttbfGlsy that contains information about the AutoText items
+						   //that are defined in this document begins at this offset. 
+	uint32_t lcbSttbfGlsy; //(4 bytes):  An unsigned integer that specifies the size, in bytes, of
+						   //the SttbfGlsy at offset fcSttbfGlsy in the Table Stream. If base.fGlsy
+						   //of the Fib that contains this FibRgFcLcb97 is zero, this value MUST be
+						   //zero.
+	uint32_t fcPlcfGlsy;   //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+						   //Stream. A PlcfGlsy that contains information about the AutoText items 
+						   //that are defined in this document begins at this offset.
+	uint32_t lcbPlcfGlsy;  //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+						   //the PlcfGlsy at offset fcPlcfGlsy in the Table Stream. If base.fGlsy 
+						   //of the Fib that contains this FibRgFcLcb97 is zero, this value MUST 
+						   //be zero. 
+	uint32_t fcPlcfHdd;    //(4 bytes):  An unsigned integer that specifies the offset in the Table
+						   //Stream where a Plcfhdd begins. The Plcfhdd specifies the locations of 
+						   //each block of header/footer text in the WordDocument Stream. If 
+						   //lcbPlcfHdd is 0, fcPlcfHdd is undefined and MUST be ignored. 
+	uint32_t lcbPlcfHdd;   //(4 bytes):  An unsigned integer that specifies the size, in bytes, of
+                           //the Plcfhdd at offset fcPlcfHdd in the Table Stream. If there is no 
+						   //Plcfhdd, this value MUST be zero. A Plcfhdd MUST exist if 
+						   //FibRgLw97.ccpHdd indicates that there are characters in the Header 
+						   //Document (that is, if FibRgLw97.ccpHdd is greater than 0). 
+						   //Otherwise, the Plcfhdd MUST NOT exist.
+	uint32_t fcPlcfBteChpx;//(4 bytes):  An unsigned integer that specifies an offset in the Table 
+						   //Stream. A PlcBteChpx begins at the offset. fcPlcfBteChpx MUST be 
+						   //greater than zero, and MUST be a valid offset in the Table Stream.
+	uint32_t lcbPlcfBteChpx;//(4 bytes):  An unsigned integer that specifies the size, in bytes, 
+	                       //of the PlcBteChpx at offset fcPlcfBteChpx in the Table Stream. 
+						   //lcbPlcfBteChpx MUST be greater than zero. 
+	uint32_t fcPlcfBtePapx;//(4 bytes):  An unsigned integer that specifies an offset in the Table
+						   //Stream. A PlcBtePapx begins at the offset. fcPlcfBtePapx MUST be 
+						   //greater than zero, and MUST be a valid offset in the Table Stream. 
+	uint32_t lcbPlcfBtePapx;//(4 bytes):  An unsigned integer that specifies the size, in bytes, of
+						   //the PlcBtePapx at offset fcPlcfBtePapx in the Table Stream. 
+						   //lcbPlcfBteChpx MUST be greater than zero.
+	uint32_t fcPlcfSea;    //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t lcbPlcfSea;   //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t fcSttbfFfn;   //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+						   //Stream. An SttbfFfn begins at this offset. This table specifies the 
+						   //fonts that are used in the document. If lcbSttbfFfn is 0, fcSttbfFfn 
+						   //is undefined and MUST be ignored.
+	uint32_t lcbSttbfFfn;  //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the SttbfFfn at offset fcSttbfFfn in the Table Stream. 
+	uint32_t fcPlcfFldMom; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Plcfld begins at this offset and specifies the locations of
+						   //field characters in the Main Document. All CPs in this Plcfld MUST be 
+						   //greater than or equal to 0 and less than or equal to 
+						   //FibRgLw97.ccpText. If lcbPlcfFldMom is zero, fcPlcfFldMom is undefined
+						   //and MUST be ignored. 
+	uint32_t lcbPlcfFldMom;//(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Plcfld at offset fcPlcfFldMom in the Table Stream. 
+	uint32_t fcPlcfFldHdr; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Plcfld begins at this offset and specifies the locations of 
+						   //field characters in the Header Document. All CPs in this Plcfld are 
+						   //relative to the starting position of the Header Document. All CPs in 
+						   //this Plcfld MUST be greater than or equal to zero and less than or 
+						   //equal to FibRgLw97.ccpHdd. If lcbPlcfFldHdr is zero, fcPlcfFldHdr is 
+						   //undefined and MUST be ignored. 
+	uint32_t lcbPlcfFldHdr;//(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+						   //the Plcfld at offset fcPlcfFldHdr in the Table Stream. 
+	uint32_t fcPlcfFldFtn; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Plcfld begins at this offset and specifies the locations of 
+						   //field characters in the Footnote Document. All CPs in this Plcfld are 
+						   //relative to the starting position of the Footnote Document. All CPs in 
+						   //this Plcfld MUST be greater than or equal to zero and less than or 
+						   //equal to FibRgLw97.ccpFtn. If lcbPlcfFldFtn is zero, fcPlcfFldFtn is 
+						   //undefined, and MUST be ignored. 
+	uint32_t lcbPlcfFldFtn;//(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+						   //the Plcfld at offset fcPlcfFldFtn in the Table Stream 
+	uint32_t fcPlcfFldAtn; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Plcfld begins at this offset and specifies the locations of 
+						   //field characters in the Comment Document. All CPs in this Plcfld are 
+						   //relative to the starting position of the Comment Document. All CPs in 
+						   //this Plcfld MUST be greater than or equal to zero and less than or 
+						   //equal to FibRgLw97.ccpAtn. If lcbPlcfFldAtn is zero, fcPlcfFldAtn is 
+						   //undefined and MUST be ignored. 
+	uint32_t lcbPlcfFldAtn;//(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Plcfld at offset fcPlcfFldAtn in the Table Stream 
+	uint32_t fcPlcfFldMcr; //(4 bytes):  This value is undefined and MUST be ignored. 
+	uint32_t lcbPlcfFldMcr;//(4 bytes):  This value is undefined and MUST be ignored. 
+	uint32_t fcSttbfBkmk;  //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. An SttbfBkmk that contains the names of the bookmarks in the 
+						   //document begins at this offset. If lcbSttbfBkmk is zero, fcSttbfBkmk 
+						   //is undefined and MUST be ignored.  
+                           //This SttbfBkmk is parallel to the Plcfbkf at offset fcPlcfBkf in the 
+						   //Table Stream. Each string specifies the name of the bookmark that is 
+						   //associated with the data element which is located at the same offset 
+						   //in that Plcfbkf. For this reason, the SttbfBkmk that begins at offset 
+						   //fcSttbfBkmk, and the Plcfbkf that begins at offset fcPlcfBkf, MUST 
+						   //contain the same number of elements. 
+	uint32_t lcbSttbfBkmk; //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the SttbfBkmk at offset fcSttbfBkmk. 
+	uint32_t fcPlcfBkf;    //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Plcfbkf that contains information about the standard 
+						   //bookmarks in the document begins at this offset. If lcbPlcfBkf is 
+						   //zero, fcPlcfBkf is undefined and MUST be ignored. 
+                           //Each data element in the Plcfbkf is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkl at offset fcPlcfBkl. 
+						   //For this reason, the Plcfbkf that begins at offset fcPlcfBkf, and the 
+						   //Plcfbkl that begins at offset fcPlcfBkl, MUST contain the same number 
+						   //of data elements. This Plcfbkf is parallel to the SttbfBkmk at offset 
+						   //fcSttbfBkmk in the Table Stream. Each data element in the Plcfbkf 
+						   //specifies information about the bookmark that is associated with the 
+						   //element which is located at the same offset in that SttbfBkmk. For 
+						   //this reason, the Plcfbkf that begins at offset fcPlcfBkf, and the 
+						   //SttbfBkmk that begins at offset fcSttbfBkmk, MUST contain the same 
+						   //number of elements. 
+						   //The largest value that a CP marking the start or end of a standard 
+						   //bookmark is allowed to have is  the CP representing the end of all 
+						   //document parts. 
+	uint32_t lcbPlcfBkf;   //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Plcfbkf at offset fcPlcfBkf. 
+	uint32_t fcPlcfBkl;    //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Plcfbkl that contains information about the standard 
+						   //bookmarks in the document begins at this offset. If lcbPlcfBkl is zero,
+						   //fcPlcfBkl is undefined and MUST be ignored.  
+                           //Each data element in the Plcfbkl is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkf at offset fcPlcfBkf. 
+						   //For this reason, the Plcfbkl that begins at offset fcPlcfBkl, and the 
+						   //Plcfbkf that begins at offset fcPlcfBkf, MUST contain the same number 
+						   //of data elements. The largest value that a CP marking the start or end 
+						   //of a standard bookmark is allowed to have is the value of the CP 
+						   //representing the end of all document parts
+	uint32_t lcbPlcfBkl;   //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Plcfbkl at offset fcPlcfBkl. 
+	uint32_t fcCmds;       //(4 bytes):  An unsigned integer that specifies the offset in the Table 
+	                       //Stream of a Tcg that specifies command-related customizations. If 
+						   //lcbCmds is zero, fcCmds is undefined and MUST be ignored. 
+	uint32_t lcbCmds;      //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Tcg at offset fcCmds. 
+	uint32_t fcUnused1;    //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t lcbUnused1;   //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t fcSttbfMcr;   //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t lcbSttbfMcr;  //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t fcPrDrvr;     //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. The PrDrvr, which contains printer driver information (the 
+						   //names of drivers, port, and so on), begins at this offset. If 
+						   //lcbPrDrvr is zero, fcPrDrvr is undefined and MUST be ignored.
+	uint32_t lcbPrDrvr;    //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the PrDrvr at offset fcPrDrvr. 
+	uint32_t fcPrEnvPort;  //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. The PrEnvPort that is the print environment in portrait mode 
+						   //begins at this offset. If lcbPrEnvPort is zero, fcPrEnvPort is 
+						   //undefined and MUST be ignored. 
+	uint32_t lcbPrEnvPort; //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the PrEnvPort at offset fcPrEnvPort 
+	uint32_t fcPrEnvLand;  //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. The PrEnvLand that is the print environment in landscape mode 
+						   //begins at this offset. If lcbPrEnvLand is zero, fcPrEnvLand is 
+						   //undefined and MUST be ignored. 
+	uint32_t lcbPrEnvLand; //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the PrEnvLand at offset fcPrEnvLand. 
+	uint32_t fcWss;        //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Selsf begins at this offset and specifies the last selection 
+						   //that was made in the Main Document. If lcbWss is zero, fcWss is 
+						   //undefined and MUST be ignored. 
+	uint32_t lcbWss;       //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Selsf at offset fcWss. 
+	uint32_t fcDop;        //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Dop begins at this offset. 
+	uint32_t lcbDop;       //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Dop at fcDop. This value MUST NOT be zero. 
+	uint32_t fcSttbfAssoc; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. An SttbfAssoc that contains strings that are associated with 
+						   //the document begins at this offset. 
+	uint32_t lcbSttbfAssoc;//(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the SttbfAssoc at offset fcSttbfAssoc. This value MUST NOT be zero 
+	uint32_t fcClx;        //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A Clx begins at this offset. 
+	uint32_t lcbClx;       //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the Clx at offset fcClx in the Table Stream. This value MUST be greater 
+						   //than zero. 
+	uint32_t fcPlcfPgdFtn; //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t lcbPlcfPgdFtn;//(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t fcAutosaveSource; //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t lcbAutosaveSource;//(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t fcGrpXstAtnOwners; //(4 bytes):  An unsigned integer that specifies an offset in the 
+	                       //Table Stream. An array of XSTs begins at this offset. The value of cch 
+						   //for all XSTs in this array MUST be less than 56. The number of entries 
+						   //in this array is limited to 0x7FFF. This array contains the names of 
+						   //authors of comments in the document. The names in this array MUST be 
+						   //unique. If no comments are defined, lcbGrpXstAtnOwners and 
+						   //fcGrpXstAtnOwners MUST be zero and MUST be ignored. If any comments 
+						   //are in the document, fcGrpXstAtnOwners MUST point to a valid array of 
+						   //XSTs. 
+	uint32_t lcbGrpXstAtnOwners;//(4 bytes):  An unsigned integer that specifies the size, in bytes, 
+	                       //of the XST array at offset fcGrpXstAtnOwners in the Table Stream. 
+	uint32_t fcSttbfAtnBkmk; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. An SttbfAtnBkmk that contains information about the annotation 
+						   //bookmarks in the document begins at this offset. If lcbSttbfAtnBkmk is 
+						   //zero, fcSttbfAtnBkmk is undefined and MUST be ignored.  The 
+						   //SttbfAtnBkmk is parallel to the Plcfbkf at offset fcPlcfAtnBkf in the 
+						   //Table Stream. Each element in the SttbfAtnBkmk specifies information 
+						   //about the bookmark which is associated with the data element that is 
+						   //located at the same offset in that Plcfbkf, so the SttbfAtnBkmk 
+						   //beginning at offset fcSttbfAtnBkmk and the Plcfbkf beginning at offset 
+						   //fcPlcfAtnBkf MUST contain the same number of elements. An additional 
+						   //constraint upon the number of elements in the SttbfAtnBkmk is specified 
+						   //in the description of fcPlcfAtnBkf. 
+	uint32_t lcbSttbfAtnBkmk;//(4 bytes):  An unsigned integer that specifies the size, in bytes, 
+	                       //of the SttbfAtnBkmk at offset fcSttbfAtnBkmk. 
+	uint32_t fcUnused2;    //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t lcbUnused2;   //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t fcUnused3;    //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t lcbUnused3;   //(4 bytes):  This value is undefined and MUST be ignored.
+	uint32_t fcPlcSpaMom;  //(4 bytes):  An unsigned integer that specifies an offset in the Table 
+	                       //Stream. A PlcfSpa begins at this offset. The PlcfSpa contains shape 
+						   //information for the Main Document. All CPs in this PlcfSpa are relative 
+						   //to the starting position of the Main Document and MUST be greater than 
+						   //or equal to zero and less than or equal to ccpText in FibRgLw97. 
+						   //The final CP is undefined and MUST be ignored, though it MUST be 
+						   //greater than the previous entry. If there are no shapes in the Main 
+						   //Document, lcbPlcSpaMom and fcPlcSpaMom MUST be zero and MUST be 
+						   //ignored. If there are shapes in the Main Document, fcPlcSpaMom MUST 
+						   //point to a valid PlcfSpa structure
+	uint32_t lcbPlcSpaMom; //(4 bytes):  An unsigned integer that specifies the size, in bytes, of 
+	                       //the PlcfSpa at offset fcPlcSpaMom. 
+	
+
+
 } FibRgFcLcb97;
 
 
