@@ -655,6 +655,63 @@ typedef struct FibRgFcLcb97
 
 } FibRgFcLcb97;
 
+uint8_t FibBaseA(FibBase *fibBase){
+	return fibBase->ABCDEFGHIJKLM & 0x01;
+}
+uint8_t FibBaseB(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x02) >> 1;
+}
+uint8_t FibBaseC(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x04) >> 2;
+}
+uint8_t FibBaseD(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x08) >> 3;
+}
+uint8_t FibBaseE(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0xF0) >> 4;
+}
+uint8_t FibBaseF(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x0100) >> 8;
+}
+uint8_t FibBaseG(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x0200) >> 9;
+}
+uint8_t FibBaseH(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x0400) >> 10;
+}
+uint8_t FibBaseI(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x0800) >> 11;
+}
+uint8_t FibBaseJ(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x1000) >> 12;
+}
+uint8_t FibBaseK(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x2000) >> 13;
+}
+uint8_t FibBaseL(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x4000) >> 14;
+}
+uint8_t FibBaseM(FibBase *fibBase){
+	return (fibBase->ABCDEFGHIJKLM & 0x8000) >> 15;
+}
+uint8_t FibBaseN(FibBase *fibBase){
+	return fibBase->NOPQRS & 0x01;
+}
+uint8_t FibBaseO(FibBase *fibBase){
+	return (fibBase->NOPQRS & 0x02) >> 1;
+}
+uint8_t FibBaseP(FibBase *fibBase){
+	return (fibBase->NOPQRS & 0x04) >> 2;
+}
+uint8_t FibBaseQ(FibBase *fibBase){
+	return (fibBase->NOPQRS & 0x08) >> 3;
+}
+uint8_t FibBaseR(FibBase *fibBase){
+	return (fibBase->NOPQRS & 0x10) >> 4;
+}
+uint8_t FibBaseS(FibBase *fibBase){
+	return (fibBase->NOPQRS & 0xE0) >> 5;
+}
 
 #ifdef __cplusplus
 }
