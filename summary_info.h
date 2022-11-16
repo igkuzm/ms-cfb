@@ -2,7 +2,7 @@
  * File              : summary_info.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 07.11.2022
+ * Last Modified Date: 16.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -37,7 +37,7 @@ extern "C"{
  */
 static int 
 summary_get_SummaryInformation(struct cfb * cfb, void * user_data,
-	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value));
+	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value));
 
 /*
  * function `summary_get_SummaryInformation`
@@ -47,8 +47,12 @@ summary_get_SummaryInformation(struct cfb * cfb, void * user_data,
  */
 static int 
 summary_get_DocumentSummaryInformation(struct cfb * cfb, void * user_data,
-	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value));
+	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value));
 
+
+/*
+ * IMP
+ */
 
 typedef struct type_of_property {
 	uint32_t prop;
@@ -65,6 +69,7 @@ typedef struct type_of_property {
 /*
 Name							Property ID string	Property	ID	VT type
 
+Codepage						PIDSI_CODEPAGE		0x00000001	VT_I2
 Title							PIDSI_TITLE			0x00000002	VT_LPSTR
 Subject							PIDSI_SUBJECT		0x00000003	VT_LPSTR
 Author							PIDSI_AUTHOR		0x00000004	VT_LPSTR
@@ -85,6 +90,7 @@ Name of Creating Application	PIDSI_APPNAME		0x00000012	VT_LPSTR
 Security						PIDSI_SECURITY		0x00000013	VT_I4            
 */
 
+#define PIDSI_CODEPAGE		0x00000001
 #define PIDSI_TITLE			0x00000002
 #define PIDSI_SUBJECT		0x00000003
 #define PIDSI_AUTHOR		0x00000004
@@ -106,6 +112,7 @@ Security						PIDSI_SECURITY		0x00000013	VT_I4
 
 static const top_t SIPS[] =              //Summary Information property set 
 {
+	{0x00000001,  PSET_I2       },
 	{0x00000002,  PSET_LPSTR    },
 	{0x00000003,  PSET_LPSTR    },
 	{0x00000004,  PSET_LPSTR    },
@@ -150,6 +157,7 @@ static const top_t SIPS[] =              //Summary Information property set
 /*
 Property name		Property identifier	Property identifier value	VARIANT type
 
+Codepage			PIDSI_CODEPAGE		0x00000001					VT_I2
 Category	        PIDDSI_CATEGORY		0x00000002					VT_LPSTR
 PresentationTarget	PIDDSI_PRESFORMAT	0x00000003					VT_LPSTR
 Bytes	            PIDDSI_BYTECOUNT	0x00000004					VT_I4
@@ -185,6 +193,7 @@ LinksUpToDate		PIDDSI_LINKSDIRTY	0x00000010					VT_BOOL
 
 static const top_t DSIPS[] =              //DocumentSummaryInformation property set 
 {
+	{0x00000001,  PSET_I2				    },
 	{0x00000002,  PSET_LPSTR                },
 	{0x00000003,  PSET_LPSTR                },
 	{0x00000004,  PSET_I4                   },
@@ -257,13 +266,13 @@ static const top_t DSIPS[] =              //DocumentSummaryInformation property 
  */
 
 int _summary_get(struct cfb * cfb, int doc_summary, void * user_data,
-	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value))
+	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value))
 {
 	char * dirname = "\005SummaryInformation";
 	if (doc_summary) 
 		dirname = "\005DocumentSummaryInformation";
 
-	FILE * stream = cfb_dir_get_stream_by_name(cfb, dirname);
+	FILE * stream = cfb_get_stream_by_name(cfb, dirname);
 	if (!stream)
 		return PSET_ERR_FILE;	
 
@@ -271,13 +280,13 @@ int _summary_get(struct cfb * cfb, int doc_summary, void * user_data,
 }
 
 int summary_get_SummaryInformation(struct cfb * cfb, void * user_data,
-	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value))
+	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value))
 {
 	return _summary_get(cfb, 0, user_data, callback);
 }
 
 int summary_get_DocumentSummaryInformation(struct cfb * cfb, void * user_data,
-	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint32_t * value))
+	int (*callback)(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value))
 {
 	return _summary_get(cfb, 1, user_data, callback);
 }

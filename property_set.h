@@ -2,7 +2,7 @@
  * File              : property_set.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 07.11.2022
+ * Last Modified Date: 16.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -253,7 +253,13 @@ uint64_t PS_DDWORD_SW (uint64_t i)
 	c7 = (i >> 48) & 255;
 	c8 = (i >> 54) & 255;
 
-	return ((uint64_t)c1 << 54) + ((uint64_t)c2 << 48) + ((uint64_t)c3 << 40) + ((uint64_t)c4 << 32) + ((uint64_t)c5 << 24) + ((uint64_t)c6 << 16) + ((uint64_t)c7 << 8) + c8;
+	return ((uint64_t)c1 << 54) + 
+		   ((uint64_t)c2 << 48) + 
+		   ((uint64_t)c3 << 40) + 
+		   ((uint64_t)c4 << 32) + 
+		   ((uint64_t)c5 << 24) + 
+		   ((uint64_t)c6 << 16) + 
+		   ((uint64_t)c7 << 8)  + c8;
 }
 
 uint32_t PS_DWORD_SW (uint32_t i)
@@ -265,7 +271,9 @@ uint32_t PS_DWORD_SW (uint32_t i)
 	c3 = (i >> 16) & 255;
 	c4 = (i >> 24) & 255;
 
-	return ((int)c1 << 24) + ((int)c2 << 16) + ((int)c3 << 8) + c4;
+	return ((int)c1 << 24) + 
+		   ((int)c2 << 16) + 
+		   ((int)c3 << 8)  + c4;
 }
 
 uint16_t PS_WORD_SW (uint16_t i)

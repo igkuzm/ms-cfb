@@ -2,7 +2,7 @@
  * File              : test.c
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 07.11.2022
+ * Last Modified Date: 08.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -93,7 +93,7 @@ int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value)
 };
 
 int callback(void * user_data, cfb_dir dir){
-	printf("DIR AB: %x\n", dir._ab[0]);
+	print_dir(&dir);
 
 	return 0;
 }
@@ -108,17 +108,19 @@ int main(int argc, char *argv[])
 
 	print_cfb_header(&cfb);
 
-	print_fat_stream(&cfb);
-	print_mfat_stream(&cfb);
-	print_dir(&cfb.root);
+	cfb_get_dirs(&cfb, NULL, callback);
 
-	cfb_dir dir;
-	cfb_get_dir_by_name(&cfb, &dir, "\005SummaryInformation");
-	print_dir(&dir);
+	//print_fat_stream(&cfb);
+	//print_mfat_stream(&cfb);
+	//print_dir(&cfb.root);
+
+	//cfb_dir dir;
+	//cfb_get_dir_by_name(&cfb, &dir, "\005SummaryInformation");
+	//print_dir(&dir);
 	
 	/*printf("ROOT DIR: %s\n", cfb_dir_name(&cfb.root));*/
 
-	FILE *si = cfb_dir_get_stream_by_name(&cfb, "\005SummaryInformation");
+	//FILE *si = cfb_dir_get_stream_by_name(&cfb, "\005SummaryInformation");
 
 
 	/*cbf_dir dir;*/
@@ -134,7 +136,7 @@ int main(int argc, char *argv[])
 	
 	/*FILE * stream = ole2_dir_stream(dir);	*/
 
-	property_set_get(si, NULL, prop_cb);
+	//property_set_get(si, NULL, prop_cb);
 
 	return 0;
 }
