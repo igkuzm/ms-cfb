@@ -1211,6 +1211,40 @@ typedef struct FibRgFcLcb2000
 						   //lcbPlcfTch is zero, fcPlcfTch is undefined and MUST be ignored 
 	uint32_t lcbPlcfTch;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
 						   //of the PlcfTch at offset fcPlcfTch 
+	uint32_t fcRmdThreading;//(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. An RmdThreading that specifies the data concerning the 
+						   //e-mail messages and their authors in this document begins at this 
+						   //offset 
+	uint32_t lcbRmdThreading;//(4 bytes):   An unsigned integer that specifies the size, in bytes,
+						   //of the RmdThreading at the offset fcRmdThreading. This value MUST NOT
+						   //be zero. 
+	uint32_t fcMid;        //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. A double-byte character Unicode string that specifies 
+						   //the message identifier of the document begins at this offset. This 
+						   //value MUST be ignored 
+	uint32_t lcbMid;       //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the double-byte character Unicode string at offset fcMid. This 
+						   //value MUST be ignored 
+	uint32_t fcSttbRgtplc; //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. A SttbRgtplc that specifies the styles of lists in the 
+						   //document begins at this offset. If lcbSttbRgtplc is zero, 
+						   //fcSttbRgtplc is undefined and MUST be ignored 
+	uint32_t lcbSttbRgtplc;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the SttbRgtplc at the offset fcSttbRgtplc 
+	uint32_t fcMsoEnvelope;//(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. An MsoEnvelopeCLSID, which specifies the envelope data
+						   //as specified by [MS-OSHARED] section 2.3.8.1, begins at this offset. 
+						   //If lcbMsoEnvelope is zero, fcMsoEnvelope is undefined and MUST be 
+						   //ignored 
+	uint32_t lcbMsoEnvelope;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the MsoEnvelopeCLSID at the offset fcMsoEnvelope 
+	uint32_t fcPlcfLad;    //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. A Plcflad begins at this offset and specifies the 
+						   //language auto-detect state of each text range. If lcbPlcfLad is zero, 
+						   //fcPlcfLad is undefined and MUST be ignored 
+	uint32_t lcbPlcfLad;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the Plcflad that begins at offset fcPlcfLad in the Table Stream 
+	uint32_t fcRgDofr;     //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
 
 } FibRgFcLcb2000;
 
