@@ -436,24 +436,25 @@ typedef struct FibRgFcLcb97
 	uint32_t fcStshf;      //(4 bytes): An unsigned integer that specifies an offset in the Table 
 	                       //Stream. An STSH that specifies the style sheet for this document 
 						   //begins at this offset. 
-	uint32_t lcbStshf;     //(4 bytes): An unsigned integer that specifies the size, in bytes, of the 
-						   //STSH that begins at offset fcStshf in the Table Stream. This MUST be a 
-						   //nonzero value. 
+	uint32_t lcbStshf;     //(4 bytes): An unsigned integer that specifies the size, in bytes, of 
+	                       //the STSH that begins at offset fcStshf in the Table Stream. This MUST 
+						   //be a nonzero value. 
 	uint32_t fcPlcffndRef; //(4 bytes): An unsigned integer that specifies an offset in the Table 
-						   //Stream. A PlcffndRef begins at this offset and specifies the locations of 
-						   //footnote references in the Main Document, and whether those references use 
-						   //auto-numbering or custom symbols. If lcbPlcffndRef is zero, fcPlcffndRef 
-						   //is undefined and MUST be ignored. 
-	uint32_t lcbPlcffndRef;//(4 bytes): An unsigned integer that specifies the size, in bytes, of the 
-						   //PlcffndRef that begins at offset fcPlcffndRef in the Table Stream. 
+						   //Stream. A PlcffndRef begins at this offset and specifies the locations
+						   //of footnote references in the Main Document, and whether those 
+						   //references use auto-numbering or custom symbols. If lcbPlcffndRef is 
+						   //zero, fcPlcffndRef is undefined and MUST be ignored. 
+	uint32_t lcbPlcffndRef;//(4 bytes): An unsigned integer that specifies the size, in bytes, of 
+	                       //the PlcffndRef that begins at offset fcPlcffndRef in the Table Stream. 
 	uint32_t fcPlcffndTxt; //(4 bytes): An unsigned integer that specifies an offset in the Table 
 						   //Stream. A PlcffndTxt begins at this offset and specifies the locations 
 						   //of each block of footnote text in the Footnote Document. 
-						   //If lcbPlcffndTxt is zero, fcPlcffndTxt is undefined and MUST be ignored. 
+						   //If lcbPlcffndTxt is zero, fcPlcffndTxt is undefined and MUST be 
+						   //ignored. 
 	uint32_t lcbPlcffndTxt;//(4 bytes):  An unsigned integer that specifies the size, in bytes, 
-						   //of the PlcffndTxt that begins at offset fcPlcffndTxt in the Table Stream. 
-						   //lcbPlcffndTxt MUST be zero if FibRgLw97.ccpFtn is zero, and MUST be 
-						   //nonzero if FibRgLw97.ccpFtn is nonzero.
+						   //of the PlcffndTxt that begins at offset fcPlcffndTxt in the Table 
+						   //Stream. lcbPlcffndTxt MUST be zero if FibRgLw97.ccpFtn is zero, and 
+						   //MUST be nonzero if FibRgLw97.ccpFtn is nonzero.
 	uint32_t fcPlcfandRef; //(4 bytes):  An unsigned integer that specifies an offset in the Table 
 						   //Stream. A PlcfandRef begins at this offset and specifies the dates, 
 						   //user initials, and locations of comments in the Main Document. If 
@@ -1244,9 +1245,578 @@ typedef struct FibRgFcLcb2000
 						   //fcPlcfLad is undefined and MUST be ignored 
 	uint32_t lcbPlcfLad;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
 						   //of the Plcflad that begins at offset fcPlcfLad in the Table Stream 
-	uint32_t fcRgDofr;     //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
-
+	uint32_t fcRgDofr;     //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						   //Stream. A variable-length array with elements of type Dofrh begins at 
+						   //that offset. The elements of this array are records that support the 
+						   //frame set and list style features. If lcbRgDofr is zero, fcRgDofr is 
+						   //undefined and MUST be ignored. 
+	uint32_t lcbRgDofr;    //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the array that begins at offset fcRgDofr in the Table Stream.
+	uint32_t fcPlcosl;     //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A PlfCosl begins at the offset. If lcbPlcosl is zero, fcPlcosl
+						   //is undefined and MUST be ignored.
+	uint32_t lcbPlcosl;    //(4 bytes):   An unsigned integer that specifies the size, in bytes, of 
+	                       //the PlfCosl at offset fcPlcosl in the Table Stream.
+	uint32_t fcPlcfCookieOld;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. A PlcfcookieOld begins at this offset. If 
+						   //lcbPlcfcookieOld is zero, fcPlcfcookieOld is undefined and MUST be 
+						   //ignored. fcPlcfcookieOld MAY be ignored. 
+						   //Word 2002, Office Word 2003, Office Word 2007, Word 2010, and Word 
+						   //2013 ignore this value.
+	uint32_t lcbPlcfCookieOld;//(4 bytes):   An unsigned integer that specifies the size, in bytes,
+                           //of the PlcfcookieOld at offset fcPlcfcookieOld in the Table Stream. 
+	uint32_t fcPgdMotherOld;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated document page layout cache begins at this
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						   //ignored. If lcbPgdMotherOld is zero, fcPgdMotherOld is undefined and 
+						   //MUST be ignored.
+						   //Word 2000 and Word 2002 emit information at offset fcPgdMotherOld. 
+						   //Neither Word 97, Office Word 2003, Office Word 2007, Word 2010, nor 
+						   //Word 2013 emit this information
+						   //Word 2000 and Word 2002 read this information. Word 97, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbPgdMotherOld;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the deprecated document page layout cache at offset fcPgdMotherOld 
+						   //in the Table Stream 
+	uint32_t fcBkdMotherOld;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated document text flow break cache begins at 
+						   //this offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbBkdMotherOld is zero, fcBkdMotherOld is 
+						   //undefined and MUST be ignored 
+						   //Word 2000 and Word 2002 emit information at offset fcBkdMotherOld. 
+						   //Neither Word 97, Office Word 2003, Office Word 2007, Word 2010, nor 
+						   //Word 2013 emit this information
+						   //Word 2000 and Word 2002 read this information. Word 97, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbBkdMotherOld;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the deprecated document text flow break cache at offset 
+						   //fcBkdMotherOld in the Table Stream 
+	uint32_t fcPgdFtnOld;  //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. The deprecated footnote layout cache begins at this offset. 
+						   //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						   //ignored. If lcbPgdFtnOld is zero, fcPgdFtnOld is undefined and MUST be
+						   //ignored 
+						   //Word 2000 and Word 2002 emit information at offset fcPgdFtnOld. 
+						   //Neither Word 97, Office Word 2003, Office Word 2007, Word 2010, nor 
+						   //Word 2013 emit this information
+						   //Word 2000 and Word 2002 read this information. Word 97, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbPgdFtnOld; //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the deprecated footnote layout cache at offset fcPgdFtnOld in the 
+						   //Table Stream
+	uint32_t fcBkdFtnOld;  //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. The deprecated footnote text flow break cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						   //ignored. If lcbBkdFtnOld is zero, fcBkdFtnOld is undefined and MUST be
+						   //ignored
+						   //Word 2000 and Word 2002 emit information at offset fcBkdFtnOld. 
+						   //Neither Word 97, Office Word 2003, Office Word 2007, Word 2010, nor 
+						   //Word 2013 emit this information
+						   //Word 2000 and Word 2002 read this information. Word 97, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbBkdFtnOld; //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the deprecated footnote text flow break cache at offset fcBkdFtnOld 
+						   //in the Table Stream
+	uint32_t fcPgdEdnOld;  //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. The deprecated endnote layout cache begins at this offset. 
+						   //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						   //ignored. If lcbPgdEdnOld is zero, fcPgdEdnOld is undefined and MUST be
+						   //ignored
+						   //Word 2000 and Word 2002 emit information at offset fcPgdEdnOld. 
+						   //Neither Word 97, Office Word 2003, Office Word 2007, Word 2010, nor 
+						   //Word 2013 emit this information
+						   //Word 2000 and Word 2002 read this information. Word 97, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbPgdEdnOld; //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the deprecated endnote layout cache at offset fcPgdEdnOld in the Table
+						   //Stream
+	uint32_t fcBkdEdnOld;  //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. The deprecated endnote text flow break cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						   //ignored. If lcbBkdEdnOld is zero, fcBkdEdnOld is undefined and MUST be
+						   //ignored
+						   //Word 2000 and Word 2002 emit information at offset fcBkdEdnOld. 
+						   //Neither Word 97, Office Word 2003, Office Word 2007, Word 2010, nor 
+						   //Word 2013 emit this information
+						   //Word 2000 and Word 2002 read this information. Word 97, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbBkdEdnOld; //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the deprecated endnote text flow break cache at offset fcBkdEdnOld in 
+						   //the Table Stream
 } FibRgFcLcb2000;
+
+/*
+ * FibRgFcLcb2002
+ * The FibRgFcLcb2002 structure is a variable-sized portion of the Fib. It extends the 
+ * FibRgFcLcb2000.
+ */
+typedef struct FibRgFcLcb2002 
+{
+	FibRgFcLcb2000 rgFcLcb2000;//(864 bytes):  The contained FibRgFcLcb2000.
+	uint32_t fcUnused1;    //(4 bytes):   This value is undefined and MUST be ignored.
+	uint32_t lcbUnused1;   //(4 bytes):   This value MUST be zero, and MUST be ignored.
+	uint32_t fcPlcfPgp;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A PGPArray begins at this offset. If lcbPlcfPgp is 0, 
+						   //fcPlcfPgp is undefined and MUST be ignored
+	uint32_t lcbPlcfPgp;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the PGPArray that is stored at offset fcPlcfPgp
+	uint32_t fcPlcfuim;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcfuim begins at this offset. If lcbPlcfuim is zero, 
+						   //fcPlcfuim is undefined and MUST be ignored
+	uint32_t lcbPlcfuim;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the Plcfuim at offset fcPlcfuim
+	uint32_t fcPlfguidUim; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A PlfguidUim begins at this offset. If lcbPlfguidUim is zero, 
+						   //fcPlfguidUim is undefined and MUST be ignored
+	uint32_t lcbPlfguidUim;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the PlfguidUim at offset fcPlfguidUim
+	uint32_t fcAtrdExtra;  //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. An AtrdExtra begins at this offset. If lcbAtrdExtra is zero, 
+						   //fcAtrdExtra is undefined and MUST be ignored
+	uint32_t lcbAtrdExtra; //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the AtrdExtra at offset fcAtrdExtra in the Table Stream
+	uint32_t fcPlrsid;     //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A PLRSID begins at this offset. If lcbPlrsid is zero, fcPlrsid
+						   //is undefined and MUST be ignored
+	uint32_t lcbPlrsid;    //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the PLRSID at offset fcPlrsid in the Table Stream
+	uint32_t fcSttbfBkmkFactoid;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. An SttbfBkmkFactoid containing information about smart 
+						   //tag bookmarks in the document begins at this offset. If 
+						   //lcbSttbfBkmkFactoid is zero, fcSttbfBkmkFactoid is undefined and MUST 
+						   //be ignored.  
+						   //The SttbfBkmkFactoid is parallel to the Plcfbkfd at offset 
+						   //fcPlcfBkfFactoid in the Table Stream. Each element in the 
+						   //SttbfBkmkFactoid specifies information about the bookmark that is 
+						   //associated with the data element which is located at the same offset 
+						   //in that Plcfbkfd. For this reason, the SttbfBkmkFactoid that begins at
+						   //offset fcSttbfBkmkFactoid, and the Plcfbkfd that begins at offset 
+						   //fcPlcfBkfFactoid, MUST contain the same number of elements
+	uint32_t lcbSttbfBkmkFactoid;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the SttbfBkmkFactoid at offset fcSttbfBkmkFactoid 
+	uint32_t fcPlcfBkfFactoid;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. A Plcfbkfd that contains information about the smart tag
+						   //bookmarks in the document begins at this offset. If lcbPlcfBkfFactoid 
+						   //is zero, fcPlcfBkfFactoid is undefined and MUST be ignored.  
+						   //Each data element in the Plcfbkfd is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkld at offset 
+						   //fcPlcfBklFactoid. For this reason, the Plcfbkfd that begins at offset 
+						   //fcPlcfBkfFactoid, and the Plcfbkld that begins at offset 
+						   //fcPlcfBklFactoid, MUST contain the same number of data elements. The 
+						   //Plcfbkfd is parallel to the SttbfBkmkFactoid at offset 
+						   //fcSttbfBkmkFactoid in the Table Stream. Each data element in the 
+						   //Plcfbkfd specifies information about the bookmark that is associated 
+						   //with the element which is located at the same offset in that 
+						   //SttbfBkmkFactoid. For this reason, the Plcfbkfd that begins at offset 
+						   //fcPlcfBkfFactoid, and the SttbfBkmkFactoid that begins at offset 
+						   //fcSttbfBkmkFactoid, MUST contain the same number of elements
+	uint32_t lcbPlcfBkfFactoid;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the Plcfbkfd at offset fcPlcfBkfFactoid 
+	uint32_t fcPlcfcookie; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcfcookie begins at this offset. If lcbPlcfcookie is zero, 
+						   //fcPlcfcookie is undefined and MUST be ignored. fcPlcfcookie MAY be 
+						   //ignored 
+						   //Office Word 2007, Word 2010, and Word 2013 ignore this value.
+	uint32_t lcbPlcfcookie;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the Plcfcookie at offset fcPlcfcookie in the Table Stream
+	uint32_t fcPlcfBklFactoid;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. A Plcfbkld that contains information about the smart tag
+						   //bookmarks in the document begins at this offset. If lcbPlcfBklFactoid 
+						   //is zero, fcPlcfBklFactoid is undefined and MUST be ignored.  
+						   //Each data element in the Plcfbkld is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkfd at offset 
+						   //fcPlcfBkfFactoid. For this reason, the Plcfbkld that begins at offset 
+						   //fcPlcfBklFactoid, and the Plcfbkfd that begins at offset 
+						   //fcPlcfBkfFactoid, MUST contain the same number of data elements
+	uint32_t lcbPlcfBklFactoid;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the Plcfbkld at offset fcPlcfBklFactoid 
+	uint32_t fcFactoidData;//(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A SmartTagData begins at this offset and specifies information
+						   //about the smart tag recognizers that are used in this document. 
+						   //If lcbFactoidData is zero, fcFactoidData is undefined and MUST be 
+						   //ignored 
+	uint32_t lcbFactoidData;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the SmartTagData at offset fcFactoidData in the Table Stream
+	uint32_t fcDocUndo;    //(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //WordDocument Stream. Version-specific undo information begins at this 
+						   //offset. This information SHOULD NOT be emitted and SHOULD be ignored 
+						   //Word 2002 and Office Word 2003 write this information when the user 
+						   //chooses to save versions in the document.  Neither Word 97, Word 2000,
+						   //Office Word 2007, Word 2010, nor Word 2013 write this information
+						   //Word 2002 and Office Word 2003 read this information.  Word 97, Word 
+						   //2000, Office Word 2007, Word 2010, and Word 2013 ignore it
+	uint32_t lcbDocUndo;   //(4 bytes):   An unsigned integer. If this value is nonzero, 
+	                       //version-specific undo information exists at offset fcDocUndo in the 
+						   //WordDocument Stream 
+	uint32_t fcSttbfBkmkFcc;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. An SttbfBkmkFcc that contains information about the 
+						   //format consistency-checker bookmarks in the document begins at this 
+						   //offset. If lcbSttbfBkmkFcc is zero, fcSttbfBkmkFcc is undefined and 
+						   //MUST be ignored.  
+						   //The SttbfBkmkFcc is parallel to the Plcfbkfd at offset fcPlcfBkfFcc in
+						   //the Table Stream. Each element in the SttbfBkmkFcc specifies 
+						   //information about the bookmark that is associated with the data 
+						   //element which is located at the same offset in that Plcfbkfd. For this
+						   //reason, the SttbfBkmkFcc that begins at offset fcSttbfBkmkFcc, and the
+						   //Plcfbkfd that begins at offset fcPlcfBkfFcc, MUST contain the same 
+						   //number of elements 
+	uint32_t lcbSttbfBkmkFcc;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the SttbfBkmkFcc at offset fcSttbfBkmkFcc 
+	uint32_t fcPlcfBkfFcc; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcfbkfd that contains information about format 
+						   //consistency-checker bookmarks in the document begins at this offset. 
+						   //If lcbPlcfBkfFcc is zero, fcPlcfBkfFcc is undefined and MUST be 
+						   //ignored 
+						   //Each data element in the Plcfbkfd is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkld at offset 
+						   //fcPlcfBklFcc. For this reason, the Plcfbkfd that begins at offset 
+						   //fcPlcfBkfFcc and the Plcfbkld that begins at offset fcPlcfBklFcc MUST 
+						   //contain the same number of data elements. The Plcfbkfd is parallel to 
+						   //the SttbfBkmkFcc at offset fcSttbfBkmkFcc in the Table Stream. Each 
+						   //data element in the Plcfbkfd specifies information about the bookmark 
+						   //that is associated with the element which is located at the same 
+						   //offset in that SttbfBkmkFcc. For this reason, the Plcfbkfd that begins
+						   //at offset fcPlcfBkfFcc and the SttbfBkmkFcc that begins at offset 
+						   //fcSttbfBkmkFcc MUST contain the same number of elements
+	uint32_t lcbPlcfBkfFcc;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the Plcfbkfd at offset fcPlcfBkfFcc
+	uint32_t fcPlcfBklFcc; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcfbkld that contains information about the format 
+						   //consistency-checker bookmarks in the document begins at this offset. 
+						   //If lcbPlcfBklFcc is zero, fcPlcfBklFcc is undefined and MUST be 
+						   //ignored.  
+						   //Each data element in the Plcfbkld is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkfd at offset 
+						   //fcPlcfBkfFcc. For this reason, the Plcfbkld that begins at offset 
+						   //fcPlcfBklFcc, and the Plcfbkfd that begins at offset fcPlcfBkfFcc, 
+						   //MUST contain the same number of data elements
+	uint32_t lcbPlcfBklFcc;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the Plcfbkld at offset fcPlcfBklFcc
+	uint32_t fcSttbfbkmkBPRepairs;//(4 bytes):   An unsigned integer that specifies an offset in 
+	                       //the Table Stream. An SttbfBkmkBPRepairs that contains information 
+						   //about the repair bookmarks in the document begins at this offset. 
+						   //If lcbSttbfBkmkBPRepairs is zero, fcSttbfBkmkBPRepairs is undefined 
+						   //and MUST be ignored. 
+						   //The SttbfBkmkBPRepairs is parallel to the Plcfbkf at offset 
+						   //fcPlcfBkfBPRepairs in the Table Stream. Each element in the 
+						   //SttbfBkmkBPRepairs specifies information about the bookmark that is 
+						   //associated with the data element which is located at the same offset 
+						   //in that Plcfbkf. For this reason, the SttbfBkmkBPRepairs that begins 
+						   //at offset fcSttbfBkmkBPRepairs, and the Plcfbkf that begins at offset 
+						   //fcPlcfBkfBPRepairs, MUST contain the same number of elements
+	uint32_t lcbSttbfbkmkBPRepairs;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the SttbfBkmkBPRepairs at offset fcSttbfBkmkBPRepairs 
+	uint32_t fcPlcfbkfBPRepairs;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. A Plcfbkf that contains information about the repair 
+						   //bookmarks in the document begins at this offset. If 
+						   //lcbPlcfBkfBPRepairs is zero, fcPlcfBkfBPRepairs is undefined and MUST 
+						   //be ignored.  
+						   //Each data element in the Plcfbkf is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkl at offset 
+						   //fcPlcfBklBPRepairs. For this reason, the Plcfbkf that begins at offset 
+						   //fcPlcfBkfBPRepairs, and the Plcfbkl that begins at offset 
+						   //fcPlcfBklBPRepairs, MUST contain the same number of data elements. 
+						   //The Plcfbkf is parallel to the SttbfBkmkBPRepairs at offset 
+						   //fcSttbfBkmkBPRepairs in the Table Stream. Each data element in the 
+						   //Plcfbkf specifies information about the bookmark that is associated 
+						   //with the element which is located at the same offset in that 
+						   //SttbfBkmkBPRepairs. For this reason, the Plcfbkf that begins at offset 
+						   //fcPlcfbkfBPRepairs, and the SttbfBkmkBPRepairs that begins at offset 
+						   //fcSttbfBkmkBPRepairs, MUST contain the same number of elements. The 
+						   //CPs in this Plcfbkf MUST NOT exceed the CP that represents the end of 
+						   //the Main Document part 
+	uint32_t lcbPlcfbkfBPRepairs;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the Plcfbkf at offset fcPlcfbkfBPRepairs 
+	uint32_t fcPlcfbklBPRepairs;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. A Plcfbkl that contains information about the repair 
+						   //bookmarks in the document begins at this offset. If 
+						   //lcbPlcfBklBPRepairs is zero, fcPlcfBklBPRepairs is undefined and MUST 
+						   //be ignored. 
+						   //Each data element in the Plcfbkl is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcfbkf at offset 
+						   //fcPlcfBkfBPRepairs. For this reason, the Plcfbkl that begins at offset 
+						   //fcPlcfBklBPRepairs, and the Plcfbkf that begins at offset 
+						   //fcPlcfBkfBPRepairs, MUST contain the same number of data elements.  
+						   //The CPs that are contained in this Plcfbkl MUST NOT exceed the CP that
+						   //represents the end of the Main Document part 
+	uint32_t lcbPlcfbklBPRepairs;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the Plcfbkl at offset fcPlcfBklBPRepairs 
+	uint32_t fcPmsNew;     //(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. A new Pms, which contains the current state of a print 
+						   //merge operation, begins at this offset. If lcbPmsNew is zero, 
+						   //fcPmsNew is undefined and MUST be ignored 
+	uint32_t lcbPmsNew;    //(4 bytes):   An unsigned integer which specifies the size, in bytes, 
+	                       //of the Pms at offset fcPmsNew. 
+	uint32_t fcODSO;       //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. Office Data Source Object (ODSO) data that is used to perform 
+						   //mail merge begins at this offset. The data is stored in an array of 
+						   //ODSOPropertyBase items. The ODSOPropertyBase items are of variable 
+						   //size and are stored contiguously. The complete set of properties that
+						   //are contained in the array is determined by reading each 
+						   //ODSOPropertyBase, until a total of lcbODSO bytes of data are read. If 
+						   //lcbODSO is zero, fcODSO is undefined and MUST be ignored 
+	uint32_t lcbODSO;      //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the Office Data Source Object data at offset fcODSO in the Table 
+						   //Stream
+	uint32_t fcPlcfpmiOldXP;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated paragraph mark information cache begins 
+						   //at this offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbPlcfpmiOldXP is zero, fcPlcfpmiOldXP is 
+						   //undefined and MUST be ignored
+						   //Word 2002 emits information at offset fcPlcfpmiOldXP. Neither Word 97,
+						   //Word 2000, Office Word 2003, Office Word 2007, Word 2010, nor Word 
+						   //2013 emit information at this offset and the value of fcPlcfpmiOldXP 
+						   //is undefined
+						   //Word 2002 reads this information. Word 97, Word 2000, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore it
+	uint32_t lcbPlcfpmiOldXP;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the deprecated paragraph mark information cache at offset 
+						   //fcPlcfpmiOldXP in the Table Stream. This value SHOULD be zero. 
+						   //Word 2002 writes lcbPlcfpmiOldXP with the size, in bytes, of the 
+						   //information emitted at offset fcPlcfpmiOldXP. Office Word 2003, Office
+						   //Word 2007, Word 2010, and Word 2013 write 0 to lcbPlcfpmiOldXP. 
+						   //Neither Word 97 nor Word 2000 write a FibRgFcLcb2002.
+	uint32_t fcPlcfpmiNewXP;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated paragraph mark information cache begins 
+						   //at this offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbPlcfpmiNewXP is zero, fcPlcfpmiNewXP is 
+						   //undefined and MUST be ignored 
+						   //Word 2002 emits information at offset fcPlcfpmiNewXP. Neither Word 97, 
+						   //Word 2000, Office Word 2003, Office Word 2007, Word 2010, nor Word 
+						   //2013 emit information at this offset and the value of fcPlcfpmiNewXP 
+						   //is undefined
+						   //Word 2002 reads this information. Word 97, Word 2000, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore it
+	uint32_t lcbPlcfpmiNewXP;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the deprecated paragraph mark information cache at offset 
+						   //fcPlcfpmiNewXP in the Table Stream. This value SHOULD be zero
+						   //Word 2002 writes lcbPlcfpmiNewXP with the size, in bytes, of the 
+						   //information emitted at offset fcPlcfpmiNewXP. Office Word 2003, Office
+						   //Word 2007, Word 2010, and Word 2013 write 0 to lcbPlcfpmiNewXP. 
+						   //Neither Word 97 nor Word 2000 write a FibRgFcLcb2002.
+	uint32_t fcPlcfpmiMixedXP;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated paragraph mark information cache begins 
+						   //at this offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbPlcfpmiMixedXP is zero, fcPlcfpmiMixedXP is 
+						   //undefined and MUST be ignored 
+						   //Word 2002 emits information at offset fcPlcfpmiMixedXP. Neither Word 
+						   //97, Word 2000, Office Word 2003, Office Word 2007, Word 2010, nor Word
+						   //2013 emit information at this offset and the value of fcPlcfpmiMixedXP
+						   //is undefined
+						   //Word 2002 reads this information. Word 97, Word 2000, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore it
+	uint32_t lcbPlcfpmiMixedXP;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the deprecated paragraph mark information cache at offset 
+						   //fcPlcfpmiMixedXP in the Table Stream. This value SHOULD be zero 
+						   //Word 2002 writes lcbPlcfpmiMixedXP with the size, in bytes, of the 
+						   //information emitted at offset fcPlcfpmiMixedXP. Office Word 2003, 
+						   //Office Word 2007, Word 2010, and Word 2013 write 0 to 
+						   //lcbPlcfpmiMixedXP. Neither Word 97 nor Word 2000 write a 
+						   //FibRgFcLcb2002.
+	uint32_t fcUnused2;    //(4 bytes):   This value is undefined and MUST be ignored. 
+	uint32_t lcbUnused2;   //(4 bytes):   This value MUST be zero, and MUST be ignored. 
+	uint32_t fcPlcffactoid;//(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcffactoid, which specifies the smart tag recognizer state 
+						   //of each text range, begins at this offset. If lcbPlcffactoid is zero, 
+						   //fcPlcffactoid is undefined and MUST be ignored. 
+	uint32_t lcbPlcffactoid;//(4 bytes):   An unsigned integer that specifies the size, in bytes of
+						   //the Plcffactoid that begins at offset fcPlcffactoid in the Table 
+						   //Stream.
+	uint32_t fcPlcflvcOldXP;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated listnum field cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						   //ignored. If lcbPlcflvcOldXP is zero, fcPlcflvcOldXP is undefined and 
+						   //MUST be ignored
+						   //Word 2002 emits information at offset fcPlcflvcOldXP. Neither Word 97,
+						   //Word 2000, Office Word 2003, Office Word 2007, Word 2010, nor Word 
+						   //2013 emit information at this offset and the value of fcPlcflvcOldXP 
+						   //is undefined.
+						   //Word 2002 reads this information. Word 97, Word 2000, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore it
+	uint32_t lcbPlcflvcOldXP;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the deprecated listnum field cache at offset fcPlcflvcOldXP in the 
+						   //Table Stream. This value SHOULD be zero 
+						   //Word 2002 writes lcbPlcflvcOldXP with the size, in bytes, of the 
+						   //information emitted at offset fcPlcflvcOldXP. Office Word 2003, Office
+						   //Word 2007, Word 2010, and Word 2013 write 0 to lcbPlcflvcOldXP. 
+						   //Neither Word 97 nor Word 2000 write a FibRgFcLcb2002.
+	uint32_t fcPlcflvcNewXP;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated listnum field cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						   //ignored. If lcbPlcflvcNewXP is zero, fcPlcflvcNewXP is undefined and 
+						   //MUST be ignored. 
+						   //Word 2002 emits information at offset fcPlcflvcNewXP. Neither Word 97,
+						   //Word 2000, Office Word 2003, Office Word 2007, Word 2010, nor Word 
+						   //2013 emit information at this offset and the value of fcPlcflvcNewXP 
+						   //is undefined
+						   //Word 2002 reads this information. Word 97, Word 2000, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore it
+	uint32_t lcbPlcflvcNewXP;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the deprecated listnum field cache at offset fcPlcflvcNewXP in the 
+						   //Table Stream. This value SHOULD be zero. 
+						   //Word 2002 writes lcbPlcflvcNewXP with the size, in bytes, of the 
+						   //information emitted at offset fcPlcflvcNewXP. Office Word 2003, Office
+						   //Word 2007, Word 2010, and Word 2013 write 0 to lcbPlcflvcNewXP. 
+						   //Neither Word 97 nor Word 2000 write a FibRgFcLcb2002.
+	uint32_t fcPlcflvcMixedXP;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. The deprecated listnum field cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						   //ignored. If lcbPlcflvcMixedXP is zero, fcPlcflvcMixedXP is undefined 
+						   //and MUST be ignored 
+						   //Word 2002 emits information at offset fcPlcflvcMixedXP. Neither Word 
+						   //97, Word 2000, Office Word 2003, Office Word 2007, Word 2010, nor Word
+						   //2013 emit information at this offset and the value of fcPlcflvcMixedXP
+						   //is undefined
+						   //Word 2002 reads this information. Word 97, Word 2000, Office Word 
+						   //2003, Office Word 2007, Word 2010, and Word 2013 ignore it
+	uint32_t lcbPlcflvcMixedXP;//(4 bytes):   An unsigned integer that specifies the size, in 
+	                       //bytes, of the deprecated listnum field cache at offset 
+						   //fcPlcflvcMixedXP in the Table Stream. This value SHOULD be zero 
+						   //Word 2002 writes lcbPlcflvcMixedXP with the size, in bytes, of the 
+						   //information emitted at offset fcPlcflvcMixedXP. Office Word 2003, 
+						   //Office Word 2007, Word 2010, and Word 2013 write 0 to 
+						   //lcbPlcflvcMixedXP. Neither Word 97 nor Word 2000 write a 
+						   //FibRgFcLcb2002.
+} FibRgFcLcb2002;
+
+/*
+ * FibRgFcLcb2003
+ * The FibRgFcLcb2003 structure is a variable-sized portion of the Fib.  It extends the 
+ * FibRgFcLcb2002.
+ */
+typedef struct FibRgFcLcb2003 
+{
+	FibRgFcLcb2002 rgFcLcb2002;//(1088 bytes): The contained FibRgFcLcb2002.
+	uint32_t fcHplxsdr;    //(4 bytes):   An unsigned integer that specifies an offset in the Table 
+	                       //Stream. An Hplxsdr structure begins at this offset. This structure 
+						   //specifies information about XML schema definition (XSD) references 
+	uint32_t lcbHplxsdr;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of 
+	                       //the Hplxsdr structure at the offset fcHplxsdr in the Table Stream. If 
+						   //lcbHplxsdr is zero, then fcHplxsdr is undefined and MUST be ignored 
+	uint32_t fcSttbfBkmkSdt;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. An SttbfBkmkSdt that contains information about the 
+						   //structured document tag bookmarks in the document begins at this 
+						   //offset. If lcbSttbfBkmkSdt is zero, then fcSttbfBkmkSdt is undefined 
+						   //and MUST be ignored.  The SttbfBkmkSdt is parallel to the Plcbkfd at 
+						   //offset fcPlcfBkfSdt in the Table Stream. Each element in the 
+						   //SttbfBkmkSdt specifies information about the bookmark that is 
+						   //associated with the data element which is located at the same offset in
+						   //that Plcbkfd. For this reason, the SttbfBkmkSdt that begins at offset 
+						   //fcSttbfBkmkSdt, and the Plcbkfd that begins at offset fcPlcfBkfSdt, 
+						   //MUST contain the same number of elements 
+	uint32_t lcbSttbfBkmkSdt;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the SttbfBkmkSdt at offset fcSttbfBkmkSdt 
+	uint32_t fcPlcfBkfSdt; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcbkfd that contains information about the structured 
+						   //document tag bookmarks in the document begins at this offset. If 
+						   //lcbPlcfBkfSdt is zero, fcPlcfBkfSdt is undefined and MUST be ignored.  
+						   //Each data element in the Plcbkfd is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcbkld at offset 
+						   //fcPlcfBklSdt. For this reason, the Plcbkfd that begins at offset 
+						   //fcPlcfBkfSdt, and the Plcbkld that begins at offset fcPlcfBklSdt, MUST
+						   //contain the same number of data elements. The Plcbkfd is parallel to 
+						   //the SttbfBkmkSdt at offset fcSttbfBkmkSdt in the Table Stream. Each 
+						   //data element in the Plcbkfd specifies information about the bookmark 
+						   //that is associated with the element which is located at the same 
+						   //offset in that SttbfBkmkSdt. For this reason, the Plcbkfd that begins
+						   //at offset fcPlcfBkfSdt, and the SttbfBkmkSdt that begins at offset 
+						   //fcSttbfBkmkSdt, MUST contain the same number of elements 
+	uint32_t lcbPlcfBkfSdt;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the Plcbkfd at offset fcPlcfBkfSdt.
+	uint32_t fcPlcfBklSdt; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcbkld that contains information about the structured 
+						   //document tag bookmarks in the document begins at this offset. If 
+						   //lcbPlcfBklSdt is zero, fcPlcfBklSdt is undefined and MUST be ignored.  
+						   //Each data element in the Plcbkld is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcbkfd at offset 
+						   //fcPlcfBkfSdt. For this reason, the Plcbkld that begins at offset 
+						   //fcPlcfBklSdt, and the Plcbkfd that begins at offset fcPlcfBkfSdt MUST 
+						   //contain the same number of data elements.
+	uint32_t lcbPlcfBklSdt;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the Plcbkld at offset fcPlcfBklSdt.
+	uint32_t fcCustomXForm;//(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. An array of 16-bit Unicode characters, which specifies the 
+						   //full path and file name of the XML Stylesheet to apply when saving 
+						   //this document in XML format, begins at this offset. If lcbCustomXForm 
+						   //is zero, fcCustomXForm is undefined and MUST be ignored.
+	uint32_t lcbCustomXForm;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the array at offset fcCustomXForm in the Table Stream. This value 
+						   //MUST be less than or equal to 4168 and MUST be evenly divisible by 
+						   //two.
+	uint32_t fcSttbfBkmkProt;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. An SttbfBkmkProt that contains information about 
+						   //range-level protection bookmarks in the document begins at this 
+						   //offset. If lcbSttbfBkmkProt is zero, fcSttbfBkmkProt is undefined and 
+						   //MUST be ignored.  
+						   //The SttbfBkmkProt is parallel to the Plcbkf at offset fcPlcfBkfProt 
+						   //in the Table Stream. Each element in the SttbfBkmkProt specifies 
+						   //information about the bookmark that is associated with the data 
+						   //element which is located at the same offset in that Plcbkf. For this 
+						   //reason, the SttbfBkmkProt that begins at offset fcSttbfBkmkProt, and 
+						   //the Plcbkf that begins at offset fcPlcfBkfProt, MUST contain the same 
+						   //number of elements. 
+	uint32_t lcbSttbfBkmkProt;//(4 bytes):   An unsigned integer that specifies the size, in bytes,
+                           //of the SttbfBkmkProt at offset fcSttbfBkmkProt. 
+	uint32_t fcPlcfBkfProt;//(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. A Plcbkf that contains information about range-level 
+						   //protection bookmarks in the document begins at this offset. If 
+						   //lcbPlcfBkfProt is zero, then fcPlcfBkfProt is undefined and MUST be 
+						   //ignored. 
+						   //Each data element in the Plcbkf is associated, in a one-to-one 
+						   //correlation, with a data element in the Plcbkl at offset 
+						   //fcPlcfBklProt. For this reason, the Plcbkf that begins at offset 
+						   //fcPlcfBkfProt, and the Plcbkl that begins at offset fcPlcfBklProt, 
+						   //MUST contain the same number of data elements. The Plcbkf is parallel 
+						   //to the SttbfBkmkProt at offset fcSttbfBkmkProt in the Table Stream. 
+						   //Each data element in the Plcbkf specifies information about the 
+						   //bookmark that is associated with the element which is located at the 
+						   //same offset in that SttbfBkmkProt. For this reason, the Plcbkf that 
+						   //begins at offset fcPlcfBkfProt, and the SttbfBkmkProt that begins at 
+						   //offset fcSttbfBkmkProt, MUST contain the same number of elements.
+	uint32_t lcbPlcfBkfProt;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the Plcbkf at offset fcPlcfBkfProt.
+	uint32_t fcPlcfBklProt;//(4 bytes):   An unsigned integer that specifies an offset in the Table
+						   //Stream. A Plcbkl containing information about range-level protection 
+						   //bookmarks in the document begins at this offset. If lcbPlcfBklProt is 
+						   //zero, then fcPlcfBklProt is undefined and MUST be ignored.  
+						   //Each data element in the Plcbkl is associated in a one-to-one 
+						   //correlation with a data element in the Plcbkf at offset fcPlcfBkfProt,
+						   //so the Plcbkl beginning at offset fcPlcfBklProt and the Plcbkf 
+						   //beginning at offset fcPlcfBkfProt MUST contain the same number of data
+						   //elements.
+	uint32_t lcbPlcfBklProt;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the Plcbkl at offset fcPlcfBklProt.
+	uint32_t fcSttbProtUser;//(4 bytes):   An unsigned integer that specifies an offset in the 
+	                       //Table Stream. A SttbProtUser that specifies the usernames that are 
+						   //used for range-level protection begins at this offset. 
+	uint32_t lcbSttbProtUser;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+	                       //of the SttbProtUser at the offset fcSttbProtUser. 
+	uint32_t fcUnused;     //(4 bytes):   This value is undefined and MUST be ignored. 
+	uint32_t lcbUnused;    //(4 bytes):   This value MUST be zero, and MUST be ignored. 
+	uint32_t fcPlcfpmiOld; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+                           //Stream. Deprecated paragraph mark information cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						   //ignored. If lcbPlcfpmiOld is zero, then fcPlcfpmiOld is undefined and 
+						   //MUST be ignored. 
+						   //Only Office Word 2003 emits information at offset fcPlcfpmiOld; 
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information 
+						   //at this offset and the value of fcPlcfpmiOld is undefined
+						   //Only Office Word 2003 reads this information.
+	uint32_t lcbPlcfpmiOld;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+                           //the deprecated paragraph mark information cache at offset fcPlcfpmiOld
+						   //in the Table Stream. SHOULD be zero.
+						   //Office Word 2003 writes lcbPlcfpmiOld with the size, in bytes, of the 
+						   //information emitted at offset fcPlcfpmiOld; Office Word 2007, Word 
+						   //2010, and Word 2013 write 0 to lcbPlcfpmiOld.
+
+
+} FibRgFcLcb2003;
 
 #ifdef __cplusplus
 }
