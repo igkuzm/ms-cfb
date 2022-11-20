@@ -2,7 +2,7 @@
  * File              : debug.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 07.11.2022
- * Last Modified Date: 07.11.2022
+ * Last Modified Date: 18.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -29,6 +29,7 @@ void print_cfb_header(struct cfb * cfb){
 	
 	printf("_uMinorVersion: %u\n", cfb->header._uMinorVersion);
 	printf("_uDllVersion: %u\n", cfb->header._uDllVersion);
+	printf("_uSectorShift: %u\n", cfb->header._uSectorShift);
 	printf("_uMiniSectorShift: %u\n", cfb->header._uMiniSectorShift);
 	printf("_usReserved: %u\n", cfb->header._usReserved);
 	printf("_ulReserved1: %u\n", cfb->header._ulReserved1);

@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 17.11.2022
+ * Last Modified Date: 20.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -17,6 +17,9 @@ extern "C"{
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "cfb.h"
+
 /*
  * [MS-DOC]: Word (.doc) Binary File Format
  * Specifies the Word (.doc) Binary File Format, which is the binary file format used by Microsoft 
@@ -131,6 +134,21 @@ const struct nFib2cbRgFcLcb nFib2cbRgFcLcbTable[] = {
 	{0x0112, 0x00B7}, 
 };
 
+static int nFib2cbRgFcLcb_compare(const void *key, const void *value) {
+    const struct nFib2cbRgFcLcb *cp1 = key;
+    const struct nFib2cbRgFcLcb *cp2 = value;
+    return cp1->nFib - cp2->nFib;
+}
+
+uint16_t cbRgFcLcb_get(uint16_t nFib){
+    struct nFib2cbRgFcLcb *result = bsearch(&nFib, nFib2cbRgFcLcbTable,
+            sizeof(nFib2cbRgFcLcbTable)/sizeof(nFib2cbRgFcLcbTable[0]),
+            sizeof(nFib2cbRgFcLcbTable[0]), nFib2cbRgFcLcb_compare);
+	if (result)
+		return result->cbRgFcLcb;
+	return 0;
+}
+
 /*
  * fibRgFcLcbBlob (variable): The FibRgFcLcb. 
  *
@@ -155,6 +173,21 @@ const struct nFib2cswNew nFib2cswNewTable[] = {
 	{0x0112, 0x0005}, 
 };
 
+static int nFib2cswNew_compare(const void *key, const void *value) {
+    const struct nFib2cswNew *cp1 = key;
+    const struct nFib2cswNew *cp2 = value;
+    return cp1->nFib - cp2->nFib;
+}
+
+uint16_t cswNew_get(uint16_t nFib){
+    struct nFib2cswNew *result = bsearch(&nFib, nFib2cswNewTable,
+            sizeof(nFib2cswNewTable)/sizeof(nFib2cswNewTable[0]),
+            sizeof(nFib2cswNewTable[0]), nFib2cswNew_compare);
+	if (result)
+		return result->cswNew;
+	return 0;
+}
+
 /*
  * FibBase 
  * The FibBase structure is the fixed-size portion of the Fib. 
@@ -172,7 +205,7 @@ typedef struct FibBase
 					   //system. This document has an nFib of 0x00C0. In addition the BiDi build of 
 					   //Word 97 differentiates its documents by saving 0x00C2 as the nFib. In both 
 					   //cases treat them as if they were 0x00C1.
-	uint16_t  unused0; //(2 bytes)
+	uint16_t  unused;  //(2 bytes)
 	uint16_t  lid;	   //(2 bytes): A LID that specifies the install language of the application that 
 					   //is producing the document. If nFib is 0x00D9 or greater, then any East Asian 
 					   //install lid or any install lid with a base language of Spanish, German or 
@@ -318,31 +351,22 @@ typedef struct FibRgW97
 	uint16_t reserved4; //(2 bytes): This value MUST be 0 and MUST be ignored. 
 	uint16_t reserved5; //(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved6; //(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved7; //(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved8; //(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved9; //(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved10;//(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved11;//(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved12;//(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t reserved13;//(2 bytes): This value MUST be 0 and MUST be ignored. 
 						//Word 97 and Word 2000 can put a value here when performing an incremental 
-						//save (FibBase.fComplex).
 	uint16_t lidFE;     //(2 bytes): A LID whose meaning depends on the nFib value, which is one of the 
 						//following:
 						//	0x00C1 If FibBase.fFarEast is "true", this is the LID of the stored 
@@ -404,26 +428,42 @@ typedef struct FibRgLw97
  * in the document. The structure of FibRgFcLcb depends on the value of nFib, which is one of the 
  * following.
  */
-typedef enum FibRgFcLcb {
-	fibRgFcLcb97, 
-	fibRgFcLcb2000, 
-	fibRgFcLcb2002, 
-	fibRgFcLcb2003, 
-	fibRgFcLcb2007, 
-} FibRgFcLcb;
+enum RgFcLcb_t {
+	RgFcLcbERROR_t,
+	RgFcLcb97_t, 
+	RgFcLcb2000_t, 
+	RgFcLcb2002_t, 
+	RgFcLcb2003_t, 
+	RgFcLcb2007_t, 
+};
 
 struct nFib2fibRgFcLcb {
 	uint16_t nFib;
-	FibRgFcLcb fibRgFcLcb;
+	enum RgFcLcb_t rgFcLcb;
 };
 
 const struct nFib2cbRgFcLcb nFib2fibRgFcLcbTable[] = {
-	{0x00C1, fibRgFcLcb97}, 
-	{0x00D9, fibRgFcLcb2000}, 
-	{0x0101, fibRgFcLcb2002}, 
-	{0x010C, fibRgFcLcb2003}, 
-	{0x0112, fibRgFcLcb2007}, 
+	{0x00C1, RgFcLcb97_t}, 
+	{0x00D9, RgFcLcb2000_t}, 
+	{0x0101, RgFcLcb2002_t}, 
+	{0x010C, RgFcLcb2003_t}, 
+	{0x0112, RgFcLcb2007_t}, 
 };
+
+static int nFib2fibRgFcLcb_compare(const void *key, const void *value) {
+    const struct nFib2fibRgFcLcb *cp1 = key;
+    const struct nFib2fibRgFcLcb *cp2 = value;
+    return cp1->nFib - cp2->nFib;
+}
+
+enum RgFcLcb_t rgFcLcb_get(uint16_t nFib){
+    struct nFib2fibRgFcLcb *result = bsearch(&nFib, nFib2fibRgFcLcbTable,
+            sizeof(nFib2fibRgFcLcbTable)/sizeof(nFib2fibRgFcLcbTable[0]),
+            sizeof(nFib2fibRgFcLcbTable[0]), nFib2fibRgFcLcb_compare);
+	if (result)	
+		return result->rgFcLcb;
+	return RgFcLcbERROR_t;
+}
 
 /*
  * FibRgFcLcb97
@@ -1814,9 +1854,1073 @@ typedef struct FibRgFcLcb2003
 						   //Office Word 2003 writes lcbPlcfpmiOld with the size, in bytes, of the 
 						   //information emitted at offset fcPlcfpmiOld; Office Word 2007, Word 
 						   //2010, and Word 2013 write 0 to lcbPlcfpmiOld.
-
-
+	uint32_t fcPlcfpmiOldInline;//(4 bytes):   An unsigned integer that specifies an offset in the
+						   //Table Stream. Deprecated paragraph mark information cache begins at 
+						   //this offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbPlcfpmiOldInline is zero, then 
+						   //fcPlcfpmiOldInline is undefined and MUST be ignored.
+						   //Only Office Word 2003 emits information at offset fcPlcfpmiOldInline;
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information 
+						   //at this offset and the value of fcPlcfpmiOldInline is undefined
+						   //Only Office Word 2003 reads this information
+	uint32_t lcbPlcfpmiOldInline;//(4 bytes):   An unsigned integer that specifies the size, in 
+						   //bytes, of the deprecated paragraph mark information cache at offset 
+						   //fcPlcfpmiOldInline in the Table Stream. SHOULD be zero
+						   //Office Word 2003 writes lcbPlcfpmiOldInline with the size, in bytes, 
+						   //of the information emitted at offset fcPlcfpmiOldInline; Office Word 
+						   //2007, Word 2010, and Word 2013 write 0 to lcbPlcfpmiOldInline
+	uint32_t fcPlcfpmiNew; //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. Deprecated paragraph mark information cache begins at 
+						   //this offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbPlcfpmiNew is zero, then fcPlcfpmiNew is 
+						   //undefined and MUST be ignored. 
+						   //Only Office Word 2003 emits information at offset fcPlcfpmiNew; 
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information 
+						   //at this offset and the value of fcPlcfpmiNew is undefined
+						   //Only Office Word 2003 reads this information
+	uint32_t lcbPlcfpmiNew;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the deprecated paragraph mark information cache at offset 
+						   //fcPlcfpmiNew in the Table Stream. SHOULD be zero. 
+						   //Office Word 2003 writes lcbPlcfpmiNew with the size, in bytes, of the
+						   //information emitted at offset fcPlcfpmiNew; Office Word 2007, Word 
+						   //2010, and Word 2013 write 0 to lcbPlcfpmiNew
+	uint32_t fcPlcfpmiNewInline;//(4 bytes):   An unsigned integer that specifies an offset in the
+						   //Table Stream. Deprecated paragraph mark information cache begins at 
+						   //this offset. Information SHOULD NOT be emitted at this offset and
+						   //SHOULD be ignored. If lcbPlcfpmiNewInline is zero, then 
+						   //fcPlcfpmiNewInline is undefined and MUST be ignored 
+						   //Only Office Word 2003 emits information at offset fcPlcfpmiNewInline;
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information
+						   //at this offset and the value of fcPlcfpmiNewInline is undefined
+						   //Only Office Word 2003 reads this information
+	uint32_t lcbPlcfpmiNewInline;//(4 bytes):   An unsigned integer that specifies the size, in 
+						   //bytes, of the deprecated paragraph mark information cache at offset 
+						   //fcPlcfpmiNewInline in the Table Stream. SHOULD be zero.
+						   //Office Word 2003 writes lcbPlcfpmiNewInline with the size, in bytes, 
+						   //of the information emitted at offset fcPlcfpmiNewInline; Office Word 
+						   //2007, Word 2010, and Word 2013 write 0 to lcbPlcfpmiNewInline
+	uint32_t fcPlcflvcOld; //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. Deprecated listnum field cache begins at this offset. 
+						   //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						   //ignored. If lcbPlcflvcOld is zero, then fcPlcflvcOld is undefined 
+						   //and MUST be ignored
+						   //Only Office Word 2003 emits information at offset fcPlcflvcOld; 
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information 
+						   //at this offset and the value of fcPlcflvcOld is undefined.
+						   //Only Office Word 2003 reads this information
+	uint32_t lcbPlcflvcOld;//(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the deprecated listnum field cache at offset fcPlcflvcOld in the 
+						   //Table Stream. SHOULD be zero 
+						   //Office Word 2003 writes lcbPlcflvcOld with the size, in bytes, of the
+						   //information emitted at offset fcPlcflvcOld; Office Word 2007, Word 
+						   //2010, and Word 2013 write 0 to lcbPlcflvcOld
+	uint32_t fcPlcflvcOldInline;//(4 bytes):   An unsigned integer that specifies an offset in the
+						   //Table Stream. Deprecated listnum field cache begins at this offset. 
+						   //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						   //ignored. If lcbPlcflvcOldInline is zero, fcPlcflvcOldInline is 
+						   //undefined and MUST be ignored 
+						   //Only Office Word 2003 emits information at offset fcPlcflvcOldInline;
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information 
+						   //at this offset and the value of fcPlcflvcOldInline is undefined
+						   //Only Office Word 2003 reads this information
+	uint32_t lcbPlcflvcOldInline;//(4 bytes):   An unsigned integer that specifies the size, in 
+						   //bytes, of the deprecated listnum field cache at offset 
+						   //fcPlcflvcOldInline in the Table Stream. SHOULD be zero
+						   //Office Word 2003 writes lcbPlcflvcOldInline with the size, in bytes,
+						   //of the information emitted at offset fcPlcflvcOldInline; Office Word
+						   //2007, Word 2010, and Word 2013 write 0 to lcbPlcflvcOldInline
+	uint32_t fcPlcflvcNew; //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. Deprecated listnum field cache begins at this offset.
+						   //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						   //ignored. If lcbPlcflvcNew is zero, fcPlcflvcNew is undefined and 
+						   //MUST be ignored 
+						   //Only Office Word 2003 emits information at offset fcPlcflvcNew; 
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information 
+						   //at this offset and the value of fcPlcflvcNew is undefined
+						   //Only Office Word 2003 reads this information
+	uint32_t lcbPlcflvcNew; //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the deprecated listnum field cache at offset fcPlcflvcNew in the 
+						   //Table Stream. SHOULD be zero 
+						   //Office Word 2003 writes lcbPlcflvcNew with the size, in bytes, of the
+						   //information emitted at offset fcPlcflvcNew; Office Word 2007, Word 
+						   //2010, and Word 2013 write 0 to lcbPlcflvcNew
+	uint32_t fcPlcflvcNewInline; //(4 bytes):   An unsigned integer that specifies an offset in 
+						   //the Table Stream. Deprecated listnum field cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and SHOULD 
+						   //be ignored. If lcbPlcflvcNewInline is zero, fcPlcflvcNewInline is 
+						   //undefined and MUST be ignored 
+						   //Only Office Word 2003 emits information at offset fcPlcflvcNewInline;
+						   //Neither Office Word 2007, Word 2010, nor Word 2013 emit information
+						   //at this offset and the value of fcPlcflvcNewInline is undefined
+						   //Only Office Word 2003 reads this information
+	uint32_t lcbPlcflvcNewInline; //(4 bytes):   An unsigned integer that specifies the size, in 
+						   //bytes, of the deprecated listnum field cache at offset 
+						   //fcPlcflvcNewInline in the Table Stream. SHOULD be zero 
+						   //Office Word 2003 writes lcbPlcflvcNewInline with the size, in bytes, 
+						   //of the information emitted at offset fcPlcflvcNewInline; Office Word 
+						   //2007, Word 2010, and Word 2013 write 0 to lcbPlcflvcNewInline
+	uint32_t fcPgdMother;  //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. Deprecated document page layout cache begins at this 
+						   //offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbPgdMother is zero, fcPgdMother is 
+						   //undefined and MUST be ignored 
+						   //Office Word 2003 emits information at offset fcPgdMother. Neither 
+						   //Word 97, Word 2000, Office Word 2003, Office Word 2007, Word 2010, 
+						   //nor Word 2013 emit this information
+						   //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						   //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbPgdMother; //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the deprecated document page layout cache at offset fcPgdMother 
+						   //in the Table Stream 
+	uint32_t fcBkdMother;  //(4 bytes):   An unsigned integer that specifies an offset in the 
+						   //Table Stream. Deprecated document text flow break cache begins at 
+						   //this offset. Information SHOULD NOT be emitted at this offset and 
+						   //SHOULD be ignored. If lcbBkdMother is zero, then fcBkdMother is 
+						   //undefined and MUST be ignored 
+						   //Office Word 2003 emits information at offset fcBkdMother. Neither 
+						   //Word 97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 
+						   //2013 emit this information
+						   //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						   //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						   //information
+	uint32_t lcbBkdMother; //(4 bytes):   An unsigned integer that specifies the size, in bytes, 
+						   //of the deprecated document text flow break cache at offset 
+						   //fcBkdMother in the Table Stream 
+	uint32_t fcAfdMother; //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. Deprecated document author filter cache begins at this offset.
+						  //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						  //ignored. If lcbAfdMother is zero, then fcAfdMother is undefined and 
+						  //MUST be ignored 
+						  //Office Word 2003 emits information at offset fcAfdMother. Neither Word
+						  //97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 
+						  //emit this information
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbAfdMother;//(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+						  //the deprecated document author filter cache at offset fcAfdMother in 
+						  //the Table Stream
+	uint32_t fcPgdFtn;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. Deprecated footnote layout cache begins at this offset. 
+						  //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						  //ignored. If lcbPgdFtn is zero, then fcPgdFtn is undefined and MUST be 
+						  //ignored
+						  //Office Word 2003 emits information at offset fcPgdFtn. Neither Word 
+						  //97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 
+						  //emit this information
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbPgdFtn;   //(4 bytes):   unsigned integer that specifies the size, in bytes, of 
+						  //the deprecated footnote layout cache at offset fcPgdFtn in the Table 
+						  //Stream
+	uint32_t fcBkdFtn;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. The deprecated footnote text flow break cache begins at this
+						  //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						  //ignored. If lcbBkdFtn is zero, fcBkdFtn is undefined and MUST be 
+						  //ignored 
+						  //Office Word 2003 emits information at offset fcBkdFtn. Neither Word 
+						  //97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 
+						  //emit this information
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbBkdFtn;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+						  //the deprecated footnote text flow break cache at offset fcBkdFtn in 
+						  //the Table Stream
+	uint32_t fcAfdFtn;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. The deprecated footnote author filter cache begins at this 
+						  //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						  //ignored. If lcbAfdFtn is zero, fcAfdFtn is undefined and MUST be 
+						  //ignored
+						  //Office Word 2003 emits information at offset fcAfdFtn. Neither Word 
+						  //97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 
+						  //emit this information
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbAfdFtn;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+						  //the deprecated footnote author filter cache at offset fcAfdFtn in the
+						  //Table Stream
+	uint32_t fcPgdEdn;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. The deprecated endnote layout cache begins at this offset. 
+						  //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						  //ignored. If lcbPgdEdn is zero, then fcPgdEdn is undefined and MUST be 
+						  //ignored
+						  //Office Word 2003 emits information at offset fcPgdEdn. Neither Word 
+						  //97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 
+						  //emit this information
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbPgdEdn;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+						  //the deprecated endnote layout cache at offset fcPgdEdn in the Table 
+						  //Stream
+	uint32_t fcBkdEdn;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. The deprecated endnote text flow break cache begins at this 
+						  //offset. Information SHOULD NOT be emitted at this offset and SHOULD be
+						  //ignored. If lcbBkdEdn is zero, fcBkdEdn is undefined and MUST be 
+						  //ignored
+						  //Office Word 2003 emits information at offset fcBkdEdn. Neither Word 
+						  //97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 
+						  //emit this information
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbBkdEdn;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+						  //the deprecated endnote text flow break cache at offset fcBkdEdn in the
+						  //Table Stream
+	uint32_t fcAfdEdn;    //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. Deprecated endnote author filter cache begins at this offset.
+						  //Information SHOULD NOT be emitted at this offset and SHOULD be 
+						  //ignored. If lcbAfdEdn is zero, then fcAfdEdn is undefined and MUST be 
+						  //ignored
+						  //Office Word 2003 emits information at offset fcAfdEdn. Neither Word 
+						  //97, Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 
+						  //emit this information
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbAfdEdn;   //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+						  //the deprecated endnote author filter cache at offset fcAfdEdn in the
+						  //Table Stream
+	uint32_t fcAfd;       //(4 bytes):   An unsigned integer that specifies an offset in the Table
+						  //Stream. A deprecated AFD structure begins at this offset. Information
+						  //SHOULD NOT be emitted at this offset and SHOULD be ignored. If lcbAfd
+						  //is zero, fcAfd is undefined and MUST be ignored
+						  //Office Word 2003 emits information at offset fcAfd. Neither Word 97, 
+						  //Word 2000, Word 2002, Office Word 2007, Word 2010, nor Word 2013 emit 
+						  //information at this offset
+						  //Office Word 2003 reads this information. Word 97, Word 2000, Word 
+						  //2002, Office Word 2007, Word 2010, and Word 2013 ignore this 
+						  //information
+	uint32_t lcbAfd;      //(4 bytes):   An unsigned integer that specifies the size, in bytes, of
+						  //the deprecated AFD structure at offset fcAfd in the Table Stream
 } FibRgFcLcb2003;
+
+/*
+ * FibRgFcLcb2007
+ * The FibRgFcLcb2007 structure is a variable-sized portion of the Fib. It extends the 
+ * FibRgFcLcb2003.
+ */
+typedef struct FibRgFcLcb2007 
+{
+	FibRgFcLcb2003 rgFcLcb2003;//(1312 bytes): The contained FibRgFcLcb2003.
+	uint32_t fcPlcfmthd;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbPlcfmthd; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcSttbfBkmkMoveFrom;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbSttbfBkmkMoveFrom; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcPlcfBkfMoveFrom;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbPlcfBkfMoveFrom; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcPlcfBklMoveFrom;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbPlcfBklMoveFrom; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcSttbfBkmkMoveTo;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbSttbfBkmkMoveTo; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcPlcfBkfMoveTo;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbPlcfBkfMoveTo; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcPlcfBklMoveTo;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbPlcfBklMoveTo; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcUnused1;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbUnused1; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcUnused2;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbUnused2; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcUnused3;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbUnused3; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcSttbfBkmkArto;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbSttbfBkmkArto; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcPlcfBkfArto;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbPlcfBkfArto; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcPlcfBklArto;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbPlcfBklArto; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcArtoData;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbArtoData; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcUnused4;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbUnused4; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcUnused5;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbUnused5; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcUnused6;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbUnused6; //(4 bytes):   This value MUST be zero, and MUST be ignored
+	uint32_t fcOssTheme;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbOssTheme; //(4 bytes):   This value MUST be zero, and MUST be ignored
+						  //Neither Office Word 2007, Word 2010, nor Word 2013 write 0 here, but 
+						  //all three ignore this value when loading files
+	uint32_t fcColorSchemeMapping;  //(4 bytes):   This value is undefined and MUST be ignored
+	uint32_t lcbColorSchemeMapping; //(4 bytes):   This value MUST be zero, and MUST be ignored
+						  //Neither Office Word 2007, Word 2010, nor Word 2013 write 0 here, but 
+						  //all three ignore this value when loading files
+
+} FibRgFcLcb2007;
+
+/*
+ * FibRgCswNew
+ * The FibRgCswNew structure is an extension to the Fib structure that exists only if Fib.cswNew 
+ * is nonzero.
+ */
+typedef struct FibRgCswNew 
+{
+	uint16_t nFibNew;//(2 bytes): An unsigned integer that specifies the version number of the 
+					      //file format that is used. This value MUST be one of the following
+					      //0x00D9, 0x0101, 0x010C, 0x0112
+	uint16_t rgCswNewData[4];
+} FibRgCswNew;
+
+enum rgCswNewData_t {
+	FibRgCswNewData2000_t,
+	FibRgCswNewData2007_t,
+};
+
+struct nFibNew2rgCswNewData {
+	uint16_t nFibNew;
+	enum rgCswNewData_t rgCswNewData;
+};
+
+const struct nFibNew2rgCswNewData nFibNew2rgCswNewDataTable[] = {
+	{0x00D9, FibRgCswNewData2000_t}, 
+	{0x0101, FibRgCswNewData2000_t}, 
+	{0x010C, FibRgCswNewData2000_t}, 
+	{0x0112, FibRgCswNewData2007_t}, 
+};
+
+enum rgCswNewData_t rgCswNewData_get(uint16_t nFibNew){
+	if (nFibNew == 0x0112)
+		return FibRgCswNewData2007_t;
+	return FibRgCswNewData2000_t;
+}
+
+/*
+ * FibRgCswNewData2000
+ * The FibRgCswNewData2000 structure is a variable-sized portion of the Fib.
+ */
+typedef struct FibRgCswNewData2000 
+{
+	uint16_t cQuickSavesNew;//(2 bytes): An unsigned integer that specifies the number of times 
+					      //that this document was incrementally saved since the last full save. 
+						  //This value MUST be between 0 and 0x000F, inclusively 
+} FibRgCswNewData2000;
+
+/*
+ * FibRgCswNewData2007
+ * The FibRgCswNewData2007 structure is a variable-sized portion of the Fib. It extends the 
+ * FibRgCswNewData2000.
+ */
+typedef struct FibRgCswNewData2007 
+{
+	FibRgCswNewData2000 rgCswNewData2000;//The contained FibRgCswNewData2000.
+	uint16_t lidThemeOther;//(2 bytes): This value is undefined and MUST be ignored 
+	uint16_t lidThemeFE;   //(2 bytes): This value is undefined and MUST be ignored 
+	uint16_t lidThemeCS;   //(2 bytes): This value is undefined and MUST be ignored 
+} FibRgCswNewData2007;
+
+/*
+ * FIB
+ * The Fib structure is located at offset 0 of the WordDocument Stream.
+ */
+
+typedef struct Fib 
+{
+	FibBase *base;        //MUST be present and has fixed size
+	uint16_t csw;         //(2 bytes): An unsigned integer that specifies the count of 16-bit 
+						  //values corresponding to fibRgW that follow. MUST be 0x000E. 
+	FibRgW97 *rgW97;      //Fib.csw * 2 bytes
+    uint16_t cslw;        //(2 bytes): An unsigned integer that specifies the count of 32-bit 
+						  //values corresponding to fibRgLw that follow. MUST be 0x0016. 
+	FibRgLw97 *rgLw97;    //Fib.cslw * 4 bytes
+	uint16_t cbRgFcLcb;   //(2 bytes): An unsigned integer that specifies the count of 64-bit 
+						  //values corresponding to fibRgFcLcbBlob that follow. This MUST be one 
+						  //of the following values, depending on the value of nFib.
+	uint32_t *rgFcLcb;    //Fib.cbRgFcLcb * 8 bytes
+	uint16_t cswNew;      //(2 bytes): An unsigned integer that specifies the count of 16-bit 
+						  //values corresponding to fibRgCswNew that follow. This MUST be one of 
+						  //the following values, depending on the value of nFib. 
+	FibRgCswNew *rgCswNew;
+	FILE *WordDocument;   //document stream
+	FILE *Table;          //table stream
+} Fib;
+
+/*
+ * How to read the FIB
+ * The Fib structure is located at offset 0 of the WordDocument Stream. Given the variable size of
+ * the Fib, the proper way to load it is the following:
+ * 1.  Set all bytes of the in-memory version of the Fib being used to 0. It is recommended to use 
+ *     the largest version of the Fib structure as the in-memory version.
+ * 2.  Read the entire FibBase, which MUST be present and has fixed size.
+ * 3.  Read Fib.csw.
+ * 4.  Read the minimum of Fib.csw * 2 bytes and the size, in bytes, of the in-memory version of 
+ *     FibRgW97 into FibRgW97.
+ * 5.  If the application expects fewer bytes than indicated by Fib.csw, advance by the difference thereby skipping the unknown portion of FibRgW97.
+ * 6.  Read Fib.cslw.
+ * 7.  Read the minimum of Fib.cslw * 4 bytes and the size, in bytes, of the in-memory version of
+ *     FibRgLw97 into FibRgLw97.
+ * 8.  If the application expects fewer bytes than indicated by Fib.cslw, advance by the difference
+ *     thereby skipping the unknown portion of FibRgLw97.
+ * 9.  Read Fib.cbRgFcLcb.
+ * 10. Read the minimum of Fib.cbRgFcLcb * 8 bytes and the size, in bytes, of the in-memory 
+ *     version of FibRgFcLcb into FibRgFcLcb.
+ * 11. If the application expects fewer bytes than indicated by Fib.cbRgFcLcb, advance by the 
+ *     difference, thereby skipping the unknown portion of FibRgFcLcb.
+ * 12. Read Fib.cswNew.
+ * 13. Read the minimum of Fib.cswNew * 2 bytes and the size, in bytes, of the in-memory version 
+ *     of FibRgCswNew into FibRgCswNew.
+*/
+
+FILE *table_stream(Fib *fib, struct cfb *cfb){
+	printf("FibBase G: %x\n", FibBaseG(fib->base));
+	if (FibBaseG(fib->base))
+		return cfb_get_stream(cfb, "1Table");
+	return cfb_get_stream(cfb, "0Table");
+}
+
+int fib_init(Fib *fib, struct cfb *cfb){
+	fib->base = NULL;
+	fib->csw = 0;
+	fib->rgW97 = NULL;
+	fib->cslw = 0;
+	fib->rgLw97 = NULL;
+	fib->cbRgFcLcb = 0;
+	fib->rgFcLcb = NULL;
+	fib->cswNew = 0;
+	fib->rgCswNew = NULL;
+
+	FILE *fp = cfb_get_stream(cfb, "WordDocument");
+	if (!fp)	
+		return DOC_ERR_FILE;
+
+	fseek(fp, 0, SEEK_SET);
+	
+	//allocate fibbase
+	fib->base = malloc(32);
+	if (!fib->base)
+		return DOC_ERR_ALLOC;
+
+	//read fibbase
+	if (fread(fib->base, 32, 1, fp) != 1){
+		free(fib->base);
+		return DOC_ERR_FILE;
+	}
+
+	//check wIdent
+	printf("wIdent: %x\n", fib->base->wIdent);
+	if (fib->base->wIdent != 0xA5EC){
+		free(fib->base);
+		return DOC_ERR_HEADER;
+	}	
+
+	//read Fib.csw
+	if (fread(&(fib->csw), 2, 1, fp) != 1){
+		free(fib->base);
+		return DOC_ERR_FILE;
+	}
+
+	//check csw
+	printf("csw: %x\n", fib->csw);
+	if (fib->csw != 14) {
+		free(fib->base);
+		return DOC_ERR_HEADER;
+	}
+
+	//allocate FibRgW97
+	fib->rgW97 = malloc(28);
+	if (!fib->rgW97){
+		free(fib->base);
+		return DOC_ERR_ALLOC;
+	}
+
+	//read FibRgW97
+	if (fread(fib->rgW97, 28, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_FILE;
+	}
+
+	//read Fib.cslw
+	if (fread(&(fib->cslw), 2, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_FILE;
+	}
+
+	//check csw
+	printf("cslw: %x\n", fib->cslw);
+	if (fib->cslw != 22) {
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_HEADER;
+	}	
+
+	//allocate FibRgLw97
+	fib->rgLw97 = malloc(88);
+	if (!fib->rgLw97){
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_ALLOC;
+	}
+	
+	//read FibRgLw97
+	if (fread(fib->rgLw97, 88, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		return DOC_ERR_FILE;
+	}	
+	
+	//read Fib.cbRgFcLcb
+	if (fread(&(fib->cbRgFcLcb), 2, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		return DOC_ERR_FILE;
+	}
+	
+	printf("cbRgFcLcb: %x\n", fib->cbRgFcLcb);
+
+	//allocate rgFcLcb
+	fib->rgFcLcb = malloc(fib->cbRgFcLcb*8);
+	if (!fib->rgFcLcb){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		return DOC_ERR_ALLOC;
+	}	
+
+	
+	//read rgFcLcb
+	if (fread(fib->rgFcLcb, 8, fib->cbRgFcLcb, fp) != fib->cbRgFcLcb){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		free(fib->rgFcLcb);
+		return DOC_ERR_FILE;
+	}	
+
+	//read Fib.cswNew
+	fread(&(fib->cswNew), 2, 1, fp);
+	printf("cswNew: %x\n", fib->cswNew);
+
+	if (fib->cswNew > 0){
+		//allocate FibRgCswNew
+		fib->rgCswNew = malloc(fib->cswNew * 2);
+		if (!fib->rgFcLcb){
+			free(fib->base);
+			free(fib->rgW97);
+			free(fib->rgLw97);
+			free(fib->rgFcLcb);
+			return DOC_ERR_ALLOC;
+		}	
+
+		//read FibRgCswNew
+		if (fread(fib->rgCswNew, 2, fib->cswNew, fp) != fib->cswNew){
+			free(fib->base);
+			free(fib->rgW97);
+			free(fib->rgLw97);
+			free(fib->rgFcLcb);
+			return DOC_ERR_FILE;
+		}	
+	}
+
+	fib->WordDocument = fp;
+	
+	fib->Table = table_stream(fib, cfb);
+	if (!fib->Table){
+		printf("Can't get Table stream\n"); 
+		return DOC_ERR_FILE;
+	}
+
+	return 0;
+}
+
+/*
+ * Prl
+ * The Prl structure is a Sprm that is followed by an operand. The Sprm specifies a property to 
+ * modify, and the operand specifies the new value.
+ */
+struct Prl {
+	uint16_t sprm;   //(2 bytes): Sprm which specifies the property to be modified
+	uint8_t *operand;//(variable): The meaning of the operand depends on the sprm(Single 
+					 //Property Modifiers).
+};
+
+/*
+ * PrcData
+ * The PrcData structure specifies an array of Prl elements and the size of the array.
+ */
+struct PrcData {
+	uint16_t cbGrpprl; //(2 byte): A signed integer that specifies the size of GrpPrl, in bytes. 
+					   //This value MUST be less than or equal to 0x3FA2
+	struct Prl *GrpPrl;//(variable):  An array of Prl elements. GrpPrl contains a whole number 
+					   //of Prl elements.
+};
+
+
+/*
+ * Prc
+ * The Prc structure specifies a set of properties for document content that is referenced by a 
+ * Pcd structure.
+ */
+struct Prc {
+	uint8_t clxt;         //(1 byte): This value MUST be 0x01
+	struct PrcData *data; //(variable):  PrcData that specifies a set of properties.
+};
+
+struct FcCompressedSpecialChar {
+	uint8_t  byte;
+	uint16_t unicodeCharacter;
+};
+
+static const struct FcCompressedSpecialChar FcCompressedSpecialChars[] = 
+{
+	 {0x82, 0x201A},
+	 {0x83, 0x0192},
+	 {0x84, 0x201E},
+	 {0x85, 0x2026},
+	 {0x86, 0x2020},
+	 {0x87, 0x2021},
+	 {0x88, 0x02C6},
+	 {0x89, 0x2030},
+	 {0x8A, 0x0160},
+	 {0x8B, 0x2039},
+	 {0x8C, 0x0152},
+	 {0x91, 0x2018},
+	 {0x92, 0x2019},
+	 {0x93, 0x201C},
+	 {0x94, 0x201D},
+	 {0x95, 0x2022},
+	 {0x96, 0x2013},
+	 {0x97, 0x2014},
+	 {0x98, 0x02DC},
+	 {0x99, 0x2122},
+	 {0x9A, 0x0161},
+	 {0x9B, 0x203A},
+	 {0x9C, 0x0153},
+	 {0x9F, 0x0178},
+};
+
+static int FcCompressedSpecialChar_compare(const void *key, const void *value) {
+    const struct FcCompressedSpecialChar *cp1 = key;
+    const struct FcCompressedSpecialChar *cp2 = value;
+    return cp1->byte - cp2->byte;
+}
+
+uint16_t FcCompressedSpecialChar_get(uint16_t nFib){
+    struct FcCompressedSpecialChar *result = bsearch(&nFib, FcCompressedSpecialChars,
+            sizeof(FcCompressedSpecialChars)/sizeof(FcCompressedSpecialChars[0]),
+            sizeof(FcCompressedSpecialChars[0]), FcCompressedSpecialChar_compare);
+	if (result)
+		return result->unicodeCharacter;
+	return 0;
+}
+
+/*
+ * FcCompressed
+ * The FcCompressed structure specifies the location of text in the WordDocument Stream.
+ */
+struct FcCompressed {
+	uint32_t fc; //fc (30 bits): An unsigned integer that specifies an offset in the 
+				 //WordDocument Stream where the text starts. If fCompressed is zero, the text 
+				 //is an array of 16-bit Unicode characters starting at offset fc. If 
+				 //fCompressed is 1, the text starts at offset fc/2 and is an array of 8-bit 
+				 //Unicode characters, except for the values which are mapped to Unicode 
+				 //characters as follows
+				 //0x82 0x201A 
+				 //0x83 0x0192 
+				 //0x84 0x201E 
+				 //0x85 0x2026 
+				 //0x86 0x2020 
+				 //0x87 0x2021 
+				 //0x88 0x02C6 
+				 //0x89 0x2030 
+				 //0x8A 0x0160 
+				 //0x8B 0x2039 
+				 //0x8C 0x0152 
+				 //0x91 0x2018 
+				 //0x92 0x2019 
+				 //0x93 0x201C 
+				 //0x94 0x201D 
+				 //0x95 0x2022 
+				 //0x96 0x2013 
+				 //0x97 0x2014 
+				 //0x98 0x02DC 
+				 //0x99 0x2122 
+				 //0x9A 0x0161 
+				 //0x9B 0x203A 
+				 //0x9C 0x0153 
+				 //0x9F 0x0178
+				 //A - fCompressed (1 bit): A bit that specifies whether the text is compressed.
+				 //B - r1 (1 bit): This bit MUST be zero, and MUST be ignored.
+};
+bool FcCompressed(struct FcCompressed fc){
+	///* TODO: byte order */
+	if ((fc.fc & 0x40000000) == 0x40000000)
+		return true;
+	return false;
+};
+uint32_t FcValue(struct FcCompressed fc){
+	///* TODO: byte order */
+	return fc.fc & 0x3FFFFFFF;	
+}
+
+/*
+ * Pcd
+ * The Pcd structure specifies the location of text in the WordDocument Stream and additional 
+ * properties for this text. A Pcd structure is an element of a PlcPcd structure.
+ */
+struct Pcd {
+	uint16_t ABCfR2; //A - fNoParaLast (1 bit): If this bit is 1, the text MUST NOT contain a 
+					 //paragraph mark.
+					 //B - fR1 (1 bit): This field is undefined and MUST be ignored
+					 //C - fDirty (1 bit): This field MUST be 0
+					 //fR2 (13 bits): This field is undefined and MUST be ignored
+	struct FcCompressed fc;//(4 bytes): An FcCompressed structure that specifies the location of 
+				     //the text in the WordDocument Stream 
+	uint16_t prm;    //A Prm structure that specifies additional properties for this text.
+};
+
+/*
+ * PlcPcd
+ * The PlcPcd structure is a PLC whose data elements are Pcds (8 bytes each). A PlcPcd MUST NOT 
+ * contain duplicate CPs.
+ */
+struct PlcPcd {
+	uint32_t *aCP; //(variable): An array of CPs that specifies the starting points of text 
+				   //ranges. The end of each range is the beginning of the next range. All CPs 
+				   //MUST be greater than or equal to zero. If any of the fields ccpFtn, ccpHdd, 
+				   //ccpAtn, ccpEdn, ccpTxbx, or ccpHdrTxbx from FibRgLw97 are nonzero, then the 
+				   //last CP MUST be equal to the sum of those fields plus ccpText+1. Otherwise, 
+				   //the last CP MUST be equal to ccpText.
+	uint32_t aCPl; //len of aCP
+	struct Pcd *aPcd;//(variable):  An array of Pcds (8 bytes each) that specify the location of 
+				   //text in the WordDocument stream and any additional properties of the text. 
+				   //If aPcd[i].fc.fCompressed is 1, then the byte offset of the last character 
+				   //of the text referenced by aPcd[i] is given by the following.
+				   //(aPcd[i].fc.fc/2) + aCP[i+1] - aCP[i] - 1;
+				   //Otherwise, the byte offset of the last character of the text referenced by 
+				   //aPcd[i] is given by the following
+				   //aPcd[i].fc.fc + 2(aCP[i+1]  - aCP[i] - 1)
+				   //Because aCP MUST be sorted in ascending order and MUST NOT contain 
+				   //duplicate CPs, (aCP[i+1]-aCP[i])>0, for all valid indexes i of aPcd. 
+				   //Because a PLC MUST contain one more CP than a data element, i+1 is a valid 
+				   //index of aCP if i is a valid index of aPcd.
+	uint32_t aPcdl;//len of aPcd
+};
+
+/*
+ * Pcdt
+ * The Pcdt structure contains a PlcPcd structure and specifies its size.
+ */
+struct Pcdt {
+	uint8_t clxt;    //(1 byte): This value MUST be 0x02
+	uint32_t lcb;    //(4 bytes): An unsigned integer that specifies the size, in bytes, of the 
+				     //PlcPcd structure.
+	struct PlcPcd *PlcPcd; //(variable): A PlcPcd structure. As with all Plc elements, the size 
+						   //that is specified by lcb MUST result in a whole number of Pcd 
+						   //structures in this PlcPcd structure.
+};
+
+/*
+ * Clx
+ * The Clx structure is an array of zero, 1, or more Prcs followed by a Pcdt.
+ */
+struct Clx {
+	struct Prc *RgPrc; //(variable): An array of Prc. If this array is empty, the first byte of
+					   //the Clx MUST be 0x02. 0x02 is invalid as the first byte of a Prc, 
+					   //but required for the Pcdt.
+	struct Pcdt *Pcdt; //(variable): A Pcdt.
+};
+
+struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
+	printf("plcpcd_new len: %d\n", len);
+	int i;
+	//allocate PlcPcd
+	struct PlcPcd *PlcPcd = malloc(sizeof(struct PlcPcd));
+	if (!PlcPcd)
+		return NULL;
+
+	//get lastCP
+	uint32_t lastCP = 
+			fib->rgLw97->ccpFtn +
+			fib->rgLw97->ccpHdd +
+			fib->rgLw97->ccpAtn +
+			fib->rgLw97->ccpEdn +
+			fib->rgLw97->ccpTxbx +
+			fib->rgLw97->ccpHdrTxbx;
+	
+	lastCP += (lastCP != 0) + fib->rgLw97->ccpText;
+
+	printf("lastCP: %d\n", lastCP);
+	//allocate aCP
+	PlcPcd->aCP = malloc(4*lastCP);
+	if (!PlcPcd->aCP){
+		free(PlcPcd);	
+		return NULL;
+	}
+
+	//read aCP
+	i=0;
+	uint32_t ch;
+	while(fread(&ch, 4, 1, fib->Table) == 1 && ch != lastCP){
+		//printf("CP: %d\n", ch);
+		PlcPcd->aCP[i++] = ch;	
+	}
+
+	//read PCD
+	uint32_t size = len - i;
+	printf("PCD size: %d\n", size);
+	PlcPcd->aPcd = malloc(size);
+	if (!PlcPcd->aPcd){
+		free(PlcPcd->aCP);	
+		free(PlcPcd);	
+		return NULL;
+	}
+	if (fread(PlcPcd->aPcd, size, 1, fib->Table) != 1){
+		free(PlcPcd->aCP);	
+		free(PlcPcd->aPcd);	
+		free(PlcPcd);	
+		return NULL;		
+	}
+	PlcPcd->aPcdl = size/8;
+	printf("PlcPcd->aPcdl: %d\n", PlcPcd->aPcdl);
+
+	for (i = 0; i < size/8; i++) {
+		struct FcCompressed fc = PlcPcd->aPcd[i].fc;
+		printf("FC: %x, ", fc.fc);
+
+		DWORD value = FcValue(fc);	
+		DWORD len = PlcPcd->aCP[i + 1] - PlcPcd->aCP[i]; 
+		printf("LEN: %d\n", len);
+		
+		if (FcCompressed(fc)){
+			value /= 2;
+			char buf[len + 1];
+			fseek(fib->WordDocument, value, SEEK_SET);
+			fread(buf, len, 1, fib->WordDocument);
+			printf("TEXT: %s\n", buf);
+		} else {
+			len *= 2;
+			uint16_t buf[len];
+			fseek(fib->WordDocument, value, SEEK_SET);
+			fread(buf, len, 1, fib->WordDocument);
+			printf("TEXT:\n");			
+			int k;
+			for (k = 0; k < 4; ++k) {
+				printf("%x ", buf[k]);
+			}
+			printf("\n");
+		}
+	}	
+
+	return PlcPcd;
+}
+
+int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
+	clx->RgPrc = malloc(sizeof(struct Prc));
+	if (!clx->RgPrc)
+		return DOC_ERR_ALLOC;		
+	
+	clx->Pcdt = malloc(sizeof(struct Pcdt));
+	if (!clx->Pcdt)
+		return DOC_ERR_ALLOC;		
+	
+	//get first byte
+	fseek(fib->Table, fcClx, SEEK_SET);
+	uint8_t ch;
+	fread(&ch, 1, 1, fib->Table);
+	if (ch == 0x01){ //we have Prc array
+		goto cycle;
+		////read cbGrpprl.
+		//uint16_t cbGrpprl;
+		//if (fread(&cbGrpprl, 2, 1, fib->Table) != 1)
+			//return DOC_ERR_FILE;
+		////cbGrpprl specifies the size of GrpPrl, in bytes. 
+		////This value MUST be less than or equal to 0x3FA2
+		//if (cbGrpprl > 0x3FA2) //error
+			//return DOC_ERR_FILE;
+		//struct Prl *GrpPrl = malloc(cbGrpprl);
+		//if (!GrpPrl)
+			//return DOC_ERR_ALLOC;		
+		////read GrpPrl 
+		//if (fread(GrpPrl, cbGrpprl, 1, fib->Table) != 1)
+			//return DOC_ERR_FILE;
+		
+		//clx->RgPrc->clxt = ch;
+		//clx->RgPrc->data = malloc(sizeof(struct PrcData));
+		//if (!clx->RgPrc->data)
+			//return DOC_ERR_ALLOC;		
+		//clx->RgPrc->data->cbGrpprl = cbGrpprl;
+		//clx->RgPrc->data->GrpPrl = GrpPrl;
+		
+		////check clx->Pcdt->clxt
+		//if (fread(&(clx->Pcdt->clxt), 1, 1, fib->Table) != 1)
+			//return DOC_ERR_FILE;
+		//if (clx->Pcdt->clxt != 0x02) //error
+			//return DOC_ERR_FILE;
+		
+		////read Pcdt->PlcPcd		
+		//clx->Pcdt->PlcPcd = 
+				//plcpcd_new(lcbClx - cbGrpprl, fib);
+	} 
+	else 
+		if (ch == 0x02){ //we have Pcdt only
+		clx->Pcdt->clxt = ch;
+		//read lcb;
+		fread(&(clx->Pcdt->lcb), 4, 1, fib->Table);
+		printf("PlcPcd size: %d\n", clx->Pcdt->lcb);
+		if (clx->Pcdt->lcb != lcbClx-5){
+			free(clx->RgPrc);
+			free(clx->Pcdt);
+			clx_init(clx, ++fcClx, --lcbClx, fib);
+		} else 
+			//read Plc piecies
+			clx->Pcdt->PlcPcd = plcpcd_new(lcbClx-5, fib);
+	} else { //error?
+			 //cycle
+		//free(clx->RgPrc);
+		//free(clx->Pcdt);
+		//clx_init(clx, ++fcClx, --lcbClx, fib);
+		//return DOC_ERR_HEADER;
+	}
+
+	return 0;
+
+	cycle:;
+	free(clx->RgPrc);
+	free(clx->Pcdt);
+	clx_init(clx, ++fcClx, --lcbClx, fib);		  
+	
+	return 0;
+} 
+
+/*
+ * Retrieving Text
+ * The following algorithm specifies how to find the text at a particular character position 
+ * (cp). Negative character positions are not valid.
+ * 1. Read the FIB from offset zero in the WordDocument Stream.
+ * 2. All versions of the FIB contain exactly one FibRgFcLcb97, though it can be nested in a 
+ * larger structure. FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx. 
+ * FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx. Read the Clx from the Table 
+ * Stream.
+ * 3. The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
+ * PlcPcd.aCp[i] ≤ cp. As with all Plcs, the elements of PlcPcd.aCp are sorted in ascending 
+ * order. Recall from the definition of a Plc that the aCp array has one more element than the 
+ * aPcd array. Thus, if the last element of PlcPcd.aCp is less than or equal to cp, cp is 
+ * outside the range of valid character positions in this document.
+ * 4. PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
+ * WordDocument Stream of the text at character position PlcPcd.aCp[i].
+ * 5. If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode 
+ * character at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This 
+ * is to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc 
+ * in the WordDocument Stream and each character occupies two bytes.
+ * 6. If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character 
+ * at offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it 
+ * is one of the special values in the table defined in the description of FcCompressed.fc. This 
+ * is to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.
+ * fc / 2 in the WordDocument Stream and each character occupies one byte.
+ *
+ * Determining Paragraph Boundaries
+ * This section specifies how to find the beginning and end character positions of the paragraph 
+ * that contains a given character position. The character at the end character position of a 
+ * paragraph MUST be a paragraph mark, an end-of-section character, a cell mark, or a TTP mark 
+ * (See Overview of Tables). Negative character positions are not valid.
+ * To find the character position of the first character in the paragraph that contains a given 
+ * character position cp:
+ * 1. Follow the algorithm from Retrieving Text up to and including step 3 to find i. Also 
+ * remember the FibRgFcLcb97 and PlcPcd found in step 1 of Retrieving Text. If the algorithm 
+ * from Retrieving Text specifies that cp is invalid, leave the algorithm.
+ * 2. Let pcd be PlcPcd.aPcd[i].
+ * 3. Let fcPcd be Pcd.fc.fc. Let fc be fcPcd + 2(cp – PlcPcd.aCp[i]). If Pcd.fc.fCompressed is 
+ * one, set fc to fc / 2, and set fcPcd to fcPcd/2.
+ * 4. Read a PlcBtePapx at offset FibRgFcLcb97.fcPlcfBtePapx in the Table Stream, and of size 
+ * FibRgFcLcb97.lcbPlcfBtePapx. Let fcLast be the last element of plcbtePapx.aFc. If fcLast is 
+ * less than or equal to fc, examine fcPcd. If fcLast is less than fcPcd, go to step 8. 
+ * Otherwise, set fc to fcLast. If Pcd.fc.fCompressed is one, set fcLast to fcLast / 2. Set 
+ * fcFirst to fcLast and go to step 7.
+ * 5. Find the largest j such that plcbtePapx.aFc[j] ≤ fc. Read a PapxFkp at offset 
+ * aPnBtePapx[j].pn *512 in the WordDocument Stream.
+ * 6. Find the largest k such that PapxFkp.rgfc[k] ≤ fc. If the last element of PapxFkp.rgfc is 
+ * less than or equal to fc, then cp is outside the range of character positions in this 
+ * document, and is not valid. Let fcFirst be PapxFkp.rgfc[k].
+ * 7. If fcFirst is greater than fcPcd, then let dfc be (fcFirst – fcPcd). If Pcd.fc.fCompressed 
+ * is zero, then set dfc to dfc / 2. The first character of the paragraph is at character 
+ * position PlcPcd.aCp[i] + dfc. Leave the algorithm.
+ * 8. If PlcPcd.aCp[i] is 0, then the first character of the paragraph is at character position 
+ * 0. Leave the algorithm.
+ * 9. Set cp to PlcPcd.aCp[i]. Set i to i - 1. Go to step 2.
+ * To find the character position of the last character in the paragraph that contains a given 
+ * character position cp:
+ * 1. Follow the algorithm from Retrieving Text up to and including step 3 to find i. Also 
+ * remember the FibRgFcLcb97, and PlcPcd found in step 1 of Retrieving Text. If the algorithm 
+ * from Retrieving Text specifies that cp is invalid, leave the algorithm.
+ * 2. Let pcd be PlcPcd.aPcd[i].
+ * 3. Let fcPcd be Pcd.fc.fc. Let fc be fcPcd + 2(cp – PlcPcd.aCp[i]). Let fcMac be fcPcd + 
+ * 2(PlcPcd.aCp[i+1] - PlcPcd.aCp[i]). If Pcd.fc.fCompressed is one, set fc to fc/2, set fcPcd 
+ * to fcPcd /2 and set fcMac to fcMac/2.
+ * 4. Read a PlcBtePapx at offset FibRgFcLcb97.fcPlcfBtePapx in the Table Stream, and of size 
+ * FibRgFcLcb97.lcbPlcfBtePapx. Then find the largest j such that plcbtePapx.aFc[j] ≤ fc. If the 
+ * last element of plcbtePapx.aFc is less than or equal to fc, then go to step 7. Read a PapxFkp 
+ * at offset aPnBtePapx[j].pn *512 in the WordDocument Stream.
+ * 5. Find largest k such that PapxFkp.rgfc[k] ≤ fc. If the last element of PapxFkp.rgfc is less 
+ * than or equal to fc, then cp is outside the range of character positions in this document, 
+ * and is not valid. Let fcLim be PapxFkp.rgfc[k+1].
+ * 6. If fcLim ≤ fcMac, then let dfc be (fcLim – fcPcd). If Pcd.fc.fCompressed is zero, then set 
+ * dfc to dfc / 2. The last character of the paragraph is at character position PlcPcd.aCp[i] + 
+ * dfc – 1. Leave the algorithm.
+ * 7. Set cp to PlcPcd.aCp[i+1]. Set i to i + 1. Go to step 2.
+*/
+
+int cfb_doc_get_text(
+		struct cfb *cfb,
+		void *user_data,
+		int (*callback)(
+			void *user_data,
+			char *str
+			)
+		)
+{
+	int ret = 0;
+
+	//Read the FIB from offset zero in the WordDocument Stream
+	Fib fib;
+	ret = fib_init(&fib, cfb);
+	if (ret)
+		return ret;
+
+	//All versions of the FIB contain exactly one FibRgFcLcb97 
+	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(fib.rgFcLcb);
+	//FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx
+	uint32_t fcClx = rgFcLcb97->fcClx;
+	printf("fcClx: %d\n", fcClx);
+	//FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx
+	uint32_t lcbClx = rgFcLcb97->lcbClx;
+	printf("lcbClx: %d\n", lcbClx);
+
+	//Read the Clx from the Table Stream
+	struct Clx clx;
+	ret = clx_init(&clx, rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
+	if (ret)
+		return ret;
+
+	//int i;
+	//for (i = 0; i < clx.Pcdt->PlcPcd->aPcdl; ++i) {
+		//struct FcCompressed fc = clx.Pcdt->PlcPcd->aPcd[i].fc;
+		//uint32_t *aCP = clx.Pcdt->PlcPcd->aCP;
+		
+		//uint32_t value = FcCompressedValue(fc);
+		//uint32_t len = aCP[i + 1] -  aCP[i];
+
+		//uint32_t off; 
+		
+		//if (FcCompressed(fc)){ //this is ANSI
+			//off = value/2 + aCP[i + 1] -  aCP[i] - 1;
+			//fseek(fib.WordDocument, off, SEEK_SET);
+			//char ch = fgetc(fib.WordDocument);
+			////fread(&ch, 1, 1, fib.WordDocument);
+			//printf("%c", ch);
+		//}else {
+			//len *= 2;
+		//}	
+	//}
+
+	return 0;
+}
 
 #ifdef __cplusplus
 }

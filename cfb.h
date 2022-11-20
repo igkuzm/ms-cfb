@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 08.11.2022
+ * Last Modified Date: 20.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -306,7 +306,9 @@ struct cfb {
 	cfb_dir root;
 	bool biteOrder;
 	SECT * fat;        // FAT sect array
+	int fat_len;       //len of array
 	SECT * mfat;       // miniFAT sect array	
+	int mfat_len;      //len of array
 };
 
 // error codes
@@ -353,8 +355,6 @@ WORD CFB_WORD_SW (WORD i)
 
 void _cfb_dir_sw(cfb_dir * dir){
 	
-	///* TODO: _ab
-	
 	dir->_cb = CFB_WORD_SW(dir->_cb);
 	dir->_sidLeftSib = CFB_DWORD_SW(dir->_sidLeftSib);
 	dir->_sidRightSib = CFB_DWORD_SW(dir->_sidRightSib);
@@ -375,6 +375,211 @@ void _cfb_dir_sw(cfb_dir * dir){
 	dir->_ulSize = CFB_DWORD_SW(dir->_ulSize);
 	dir->_dptPropType = CFB_WORD_SW(dir->_dptPropType);
 }
+
+//return len of utf8 string
+size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
+	int i, k = 0;
+	for (i = 0; i < len; ++i) {
+		WORD wc = utf16[i];
+		if (wc > 0x80){ //2-byte
+			//get first byte - first 5 bit 00000111 11000000
+			//and mask with 11000000 
+			utf8[k++] = ((wc & 0x7C0)>> 6) | 0xC0;
+
+			//get last - 00000000 00111111 
+			//and mask with 10000000 
+			utf8[k++] = ( wc & 0x3F)       | 0x80;
+		}
+		else //ANSY
+			utf8[k++] = wc;
+	}
+	//null-terminate
+	utf8[k] = 0;	
+
+	return k;
+}
+
+FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
+	ULONG s = dir->_ulSize;    //size of stream
+	SECT  p = dir->_sectStart; // start position in FAT/miniFAT chain
+	
+	DWORD ssize;  //sector size	
+	DWORD sstart; //start for sectors - 0 for MFAT, ssize for FAT; 
+
+	DWORD off;    //offset
+	
+	//check FAT or miniFAT
+	SECT *chain;
+	if (s < cfb->header._ulMiniSectorCutoff){
+		printf("Stream is minifat\n");
+		//use miniFAT
+		ssize = 1 << cfb->header._uMiniSectorShift;
+		chain = cfb->mfat;
+		sstart = 0;
+	}
+	else {
+		printf("Stream is fat\n");
+		//use FAT
+		ssize = 1 << cfb->header._uSectorShift;
+		chain = cfb->fat;
+		sstart = ssize;
+	} 
+	
+	off = p * ssize + sstart;
+	
+	printf("sectorsize: %d\n", ssize);
+	printf("offset: %d\n", off);
+
+	//seek to start offset
+	fseek(cfb->fp, off, SEEK_SET);
+
+	//create stream
+	FILE * stream = tmpfile();
+
+	//copy data
+	while (p != ENDOFCHAIN) {
+		char buf[ssize];
+		fread (buf, ssize, 1, cfb->fp);
+		fwrite(buf, ssize, 1, stream );
+		
+		// get next FAT/miniFAT
+		p = chain[p];
+		fseek(cfb->fp, p * ssize + sstart, SEEK_SET);
+	}
+
+	fseek(stream, 0, SEEK_SET);
+	return stream;	
+}
+
+int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
+		int (*callback)(void * user_data, cfb_dir dir))
+{
+	int i;
+	
+	//goto dir data
+	ULONG p = 512 + sid*sizeof(cfb_dir) + (cfb->header._sectDirStart << cfb->header._uSectorShift);
+	fseek(cfb->fp, p, SEEK_SET);
+
+	//copy dir data
+	cfb_dir dir;
+
+	if (fread(&dir, sizeof(cfb_dir), 1, cfb->fp) != 1)
+		return -1;
+
+	if (cfb->biteOrder)
+		_cfb_dir_sw(&dir);
+	
+	if (callback)
+		callback(user_data, dir);
+
+	return 0;
+}
+
+int cfb_dir_callback(void * user_data, cfb_dir dir){
+	cfb_dir * _dir = user_data;
+	*_dir = dir;
+	return 0;
+}
+
+int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
+	return cfb_dir_by_sid(cfb, sid, dir, cfb_dir_callback);
+}
+
+char * cfb_dir_name(cfb_dir * dir){
+	char * name = malloc(2*dir->_cb);
+	if (!name)
+		return NULL;
+	
+	int size = dir->_cb/2;
+	WORD ab[size];
+	int i, c;
+	for (i = 0, c = 0; i < dir->_cb; ++i, ++c) {
+		char ch0 = dir->_ab[i++];	
+		char ch1 = dir->_ab[i];	
+		if (ch1 == 0)
+			ab[c] = ch0;
+		else
+			ab[c] = (ch0 << 8) + ch1;
+	}
+
+	if (!_utf16_to_utf8(ab, dir->_cb, name))
+		return NULL;
+
+	return name;
+}
+
+
+int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
+		int (*callback)(void * user_data, cfb_dir dir))
+{
+	if(!dir)
+		return -1;
+	//check name
+	char * dirname = cfb_dir_name(dir);
+	int res;
+	size_t name_len = strlen(name);
+	size_t dirname_len = strlen(dirname);
+	if (name_len < dirname_len)
+		res = -1;
+	else if (name_len > dirname_len)
+		res = 1;
+	else 
+		res = strcmp(name, dirname);
+	free(dirname);
+	if (res == 0)
+		callback(user_data, *dir);
+	if (res < 0){
+		//check left
+		if (dir->_sidLeftSib != -1){
+			cfb_dir new_dir;
+			cfb_dir_by_sid(cfb, dir->_sidLeftSib, &new_dir, cfb_dir_callback);
+			return _cfb_dir_find(cfb, &new_dir, name, user_data, callback);
+		}
+	} else {
+		//check right
+		if (dir->_sidRightSib != -1){
+			cfb_dir new_dir;
+			cfb_dir_by_sid(cfb, dir->_sidRightSib, &new_dir, cfb_dir_callback);
+			return _cfb_dir_find(cfb, &new_dir, name, user_data, callback);
+		}	
+	}
+	return 0;
+}
+int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
+		int (*callback)(void * user_data, cfb_dir dir))
+{
+	cfb_dir dir;
+	cfb_get_dir_by_sid(cfb, &dir, cfb->root._sidChild);
+	return _cfb_dir_find(cfb, &dir, name, user_data, callback);
+}
+
+int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
+	return cfb_dir_by_name(cfb, name, dir, cfb_dir_callback);
+}
+
+FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
+	cfb_dir dir;
+	if (cfb_get_dir_by_sid(cfb, &dir, sid))
+		return NULL; //no dir
+	
+	return cfb_get_stream_by_dir(cfb, &dir);
+};
+
+FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
+	printf("Get Stream for dir: %s\n", name);
+	cfb_dir dir;
+	if (cfb_get_dir_by_name(cfb, &dir, name))
+		return NULL; //no dir
+	
+	return cfb_get_stream_by_dir(cfb, &dir);
+}
+
+#define cfb_get_stream(cfb, arg)\
+	_Generic((arg), \
+			char*:       cfb_get_stream_by_name, \
+			int:         cfb_get_stream_by_sid, \
+			cfb_dir *:   cfb_get_stream_by_dir \
+	)((cfb), (arg))	
 
 int _cfb_init(struct cfb * cfb, FILE *fp){
 	int error = 0;
@@ -446,20 +651,46 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 	if (!signature)
 		return CFB_SIG_ERR;
 
-	uint32_t ch; 
+
+/*
+ * The FAT is the main allocator for space within a compound file. Every sector in the file 
+ * is represented within the FAT in some fashion, including those sectors that are unallocated
+ *(free). The FAT is a sector chain that is made up of one or more FAT sectors.
+ */
+	struct FAT {
+		SECT n;     //This field specifies the next sector number in a chain of sectors.
+					//The last FAT sector can have more entries that span past the actual size of
+					//the compound file. In this case, the entries that cover past end-of-file 
+					//MUST be marked with FREESECT (0xFFFFFFFF). The size of a compound file is 
+					//determined by the index of the last non-free FAT array entry. If the last 
+					//FAT sector contains an entry FAT[N] != FREESECT (0xFFFFFFFF), the file size 
+					//MUST be at least (N + 1) x (Sector Size) bytes in length.
+	};
+/*
+ * The FAT is an array of sector numbers that represent the allocation of space within the 
+ * file, grouped into FAT sectors. Each stream is represented in the FAT by a sector chain, 
+ * in much the same fashion as a FAT file system.
+ */
 	
-	//check FAT stream
-	if (cfb->header._csectFat > 0){
-		cfb->fat   = malloc(sizeof(SECT) * cfb->header._csectFat); //FAT array
-		
-		// only 109 FAT SECT in header - other in DIF
-		for (i=0; i < 109; i++){
-			if (cfb->biteOrder){
-				cfb->fat[i] = CFB_DWORD_SW(cfb->header._sectFat[i]);
-			} else {
-				cfb->fat[i] = cfb->header._sectFat[i];
-			}
-		}
+	struct FAT *FAT;    //array of FAT chain
+	DWORD fat_len = 0;  //size of fat aray
+	
+/*
+ * If Header Major Version is 3, there MUST be 128 fields specified to fill a 512-byte sector.
+ * If Header Major Version is 4, there MUST be 1,024 fields specified to fill a 4,096-byte sector.
+ */
+	FSINDEX DIFATn = 127; //number of FAT sectors in DIF
+	if (cfb->header._uDllVersion == 4)
+		DIFATn = 1023;
+
+/*
+ * The locations of FAT sectors are read from the DIFAT. The FAT is represented in itself, but 
+ * not by a chain. A special reserved sector number (FATSECT = 0xFFFFFFFD) is used to mark sectors
+ *that are allocated to the FAT.
+ */
+
+	SECT *DIFAT; //DIFAT array
+	DWORD dfat_len = 0;  //size of difat aray
 
 /*
  * double-indirect file allocation table (DIFAT): A structure that is used to locate FAT sectors 
@@ -470,75 +701,131 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
  * minus the "Next DIFAT Sector Location" field.
  *		If Header Major Version is 4, there MUST be 1,023 fields specified to fill a 4,096-byte 
  *sector minus the "Next DIFAT Sector Location" field.
-*/
-		int n = 127; //number of FAT sectors in DIF
-		if (cfb->header._uDllVersion == 4)
-			n = 1023;
+*/	
 
-		// check DIF
-		if (cfb->header._csectDif > 0){
-			// get first dif
-			p = 512 + cfb->header._sectDifStart;
+/* The DIFAT sectors are linked together by the last field in each DIFAT sector. As an 
+ * optimization, the first 109 FAT sectors are represented within the header itself. 
+ * No DIFAT sectors are needed in a compound file that is smaller than 6.875 megabytes (MB) for 
+ * a 512-byte sector compound file (6.875 MB = (1 header sector + 109 FAT sectors x 128 non-empty
+ *entries) × 512 bytes per sector).
+ */ 
+	//get all DIFAT
+	//first 109 FAT are in header
+	DIFAT = malloc(sizeof(SECT) * 109);
+	for (dfat_len = 0; dfat_len < 109; ++dfat_len) {
+		//copy difat data to array
+		DIFAT[dfat_len] = cfb->header._sectFat[dfat_len];
+		if (cfb->biteOrder)
+			DIFAT[dfat_len] = CFB_DWORD_SW(DIFAT[dfat_len]);		
+	
+		if (dfat_len == cfb->header._csectFat)
+			break;
+	}
+	//get other DIFAT
+	//start DIFAT is in header _sectDifStart
+	int j = 0; //dfat counter
+	if (cfb->header._sectDifStart != ENDOFCHAIN){
+		
+		SECT from = cfb->header._sectDifStart;
+		
+		while (from != ENDOFCHAIN && ++j < cfb->header._csectDif) {
+			//get offset
+			p = (from + 1) << cfb->header._uSectorShift;
 			fseek(fp, p, SEEK_SET);
-			
-			//read FAT SECTs
-			int d = 0; // count sectors
-			while(fread(&ch, 4, 1, fp) == 1){
-				if (cfb->biteOrder)
-					ch = CFB_DWORD_SW(ch);
-				
-				if (ch == ENDOFCHAIN || ch == EOF)
-					break;
 
-				if (d == n) { //go to next DIF
-					p = ch << cfb->header._uSectorShift;
-					fseek(fp, p, SEEK_SET);
-					if (fread(&ch, 4, 1, fp) != 1){
-						error = CFB_READ_ERR|CFB_DIF_ERR;
-						break;
-					}
-					if (cfb->biteOrder)
-						ch = CFB_DWORD_SW(ch);
-					i = 0;
-				}
-				cfb->fat[i++] = ch;
-				d++;
+			//write DIFAT to array
+			int nsect = (1<<cfb->header._uSectorShift)/4 - 1;
+			while (nsect-- > 0) {
+				//realloc array
+				void *DIFAT_p = 
+						realloc(DIFAT, sizeof(SECT) * (dfat_len + 1));	
+				if (!DIFAT_p)
+					break;
+				DIFAT = DIFAT_p;
+
+				//add to array
+				fread(&DIFAT[dfat_len++], 4, 1, fp);
+				if (cfb->biteOrder)
+					DIFAT[i] = CFB_DWORD_SW(DIFAT[dfat_len]);		
 			}
+
+			//find next
+			fread(&from, 4, 1, fp);
+			if (cfb->biteOrder)
+				from = CFB_DWORD_SW(from);			
 		}
 	}
 
-	// get root dir
-	p = 512 + (cfb->header._sectDirStart << cfb->header._uSectorShift); 
-	fseek(fp, p, SEEK_SET);
-	if (fread(&cfb->root, sizeof(cfb->root), 1, fp) != 1){
-		return CFB_READ_ERR|CFB_ROOT_ERR;
+/*
+ * The locations of FAT sectors are read from the DIFAT. The FAT is represented in itself, but 
+ * not by a chain. A special reserved sector number (FATSECT = 0xFFFFFFFD) is used to mark sectors
+ * that are allocated to the FAT.
+ */
+
+	//alloc FAT array
+	FAT = malloc(dfat_len * (1 << cfb->header._uSectorShift) * sizeof(SECT));
+	if (!FAT)
+		return CFB_ALLOC_ERR;
+	
+	//fill FAT chains
+	for (i = 0; i < dfat_len; ++i) {
+		// start offset +1 (header 512b)
+		p = (DIFAT[i] + 1) << cfb->header._uSectorShift;
+		fseek(fp, p, SEEK_SET);
+
+		//copy FAT to array
+		int nsect = (1<<cfb->header._uSectorShift)/4;
+		while (nsect-- > 0) {
+			fread(&(FAT[fat_len++]), 4, 1, fp);
+			if (cfb->biteOrder)
+				FAT[fat_len].n = CFB_DWORD_SW(FAT[fat_len].n);			
+		}		
 	}
 
-	if (cfb->biteOrder)
-		_cfb_dir_sw(&cfb->root);
+	//free DIFAT
+	free(DIFAT);
 
-	//check miniFAT stream
+	//set cfb attributes
+	cfb->fat = (SECT *)FAT;
+	cfb->fat_len = fat_len;
+
+/*
+ *  The mini FAT is used to allocate space in the mini stream. The mini stream is divided into
+ *  smaller, equal-length sectors, and the sector size that is used for the mini stream is 
+ *  specified from the Compound File Header (64 bytes).
+ */
+	struct FAT *mFAT; //mini FAT chain array
+
+/*
+ * The mini stream is chained within the FAT in exactly the same fashion as any normal stream. 
+ * The mini stream's starting sector is referenced in the first directory entry (root storage 
+ * stream ID 0).
+ */	
 	if (cfb->header._csectMiniFat > 0){
-		cfb->mfat = malloc(cfb->root._ulSize); //miniFat sectors array
-		if(!cfb->mfat)
-			return CFB_MFAT_ERR|CFB_ALLOC_ERR;
+		// get root dir
+		cfb_get_dir_by_sid(cfb, &cfb->root, 0);
+
+		//allocate mFAT
+		mFAT = malloc(cfb->root._ulSize);
+		if (!mFAT)
+			return CFB_ALLOC_ERR;
+
+		int mfat_len = 0; //len of mFAT array
 
 		// get miniFAT stream SECT chain - located in ROOT DIR
-		p = 512 + (cfb->root._sectStart << cfb->header._uSectorShift);
-		fseek(fp, p, SEEK_SET);
-		for (i = 0; i < cfb->header._csectMiniFat; ++i) {
-			if (fread(&ch, 4, 1, fp) != 1){
-				error = CFB_READ_ERR|CFB_ROOT_ERR|CFB_MFAT_ERR;
-				break;
-			}
+		FILE *mFATstream = cfb_get_stream_by_dir(cfb, &cfb->root);
+
+		//get chains
+		DWORD ch;
+		while(fread(&ch, 4, 1, mFATstream) == 1 && mfat_len < cfb->root._ulSize/4){
 			if (cfb->biteOrder)
 				ch = CFB_DWORD_SW(ch);
 
-			if (fwrite(&ch, 4, 1, fp) != 1){
-				error = CFB_WRITE_ERR|CFB_ROOT_ERR|CFB_MFAT_ERR;
-				break;
-			}
+			cfb->mfat[mfat_len++] = ch;
 		}
+		cfb->mfat_len = mfat_len;
+
+		fclose(mFATstream);
 	}
 
 	return error;
@@ -572,28 +859,6 @@ int cfb_open(struct cfb * cfb, const char * filename){
 	return _cfb_init(cfb, newfile); 
 };
 
-//return len of utf8 string
-size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
-	int i, k = 0;
-	for (i = 0; i < len; ++i) {
-		WORD wc = utf16[i];
-		if (wc > 0x80){ //2-byte
-			//get first byte - first 5 bit 00000111 11000000
-			//and mask with 11000000 
-			utf8[k++] = ((wc & 0x7C0)>> 6) | 0xC0;
-
-			//get last - 00000000 00111111 
-			//and mask with 10000000 
-			utf8[k++] = ( wc & 0x3F)       | 0x80;
-		}
-		else //ANSY
-			utf8[k++] = wc;
-	}
-	//null-terminate
-	utf8[k] = 0;	
-
-	return k;
-}
 
 //resturn len of utf16 string
 size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
@@ -650,201 +915,13 @@ size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
 	return i;
 }
 
-int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
-		int (*callback)(void * user_data, cfb_dir dir))
-{
-	int i;
-	
-	//goto dir data
-	ULONG p = 512 + sid*sizeof(cfb_dir) + (cfb->header._sectDirStart << cfb->header._uSectorShift);
-	fseek(cfb->fp, p, SEEK_SET);
-
-	//copy dir data
-	cfb_dir dir;
-
-	if (fread(&dir, sizeof(cfb_dir), 1, cfb->fp) != 1)
-		return -1;
-
-	if (cfb->biteOrder)
-		_cfb_dir_sw(&dir);
-	
-	if (callback)
-		callback(user_data, dir);
-
-	return 0;
-}
-
-char * cfb_dir_name(cfb_dir * dir){
-	char * name = malloc(2*dir->_cb);
-	if (!name)
-		return NULL;
-	
-	int size = dir->_cb/2;
-	WORD ab[size];
-	int i, c;
-	for (i = 0, c = 0; i < dir->_cb; ++i, ++c) {
-		char ch0 = dir->_ab[i++];	
-		char ch1 = dir->_ab[i];	
-		if (ch1 == 0)
-			ab[c] = ch0;
-		else
-			ab[c] = (ch0 << 8) + ch1;
-	}
-
-	if (!_utf16_to_utf8(ab, dir->_cb, name))
-		return NULL;
-
-	return name;
-}
-
-int cfb_dir_callback(void * user_data, cfb_dir dir){
-	cfb_dir * _dir = user_data;
-	*_dir = dir;
-	return 0;
-}
-
-int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
-		int (*callback)(void * user_data, cfb_dir dir))
-{
-	if(!dir)
-		return -1;
-	//check name
-	char * dirname = cfb_dir_name(dir);
-	int res;
-	size_t name_len = strlen(name);
-	size_t dirname_len = strlen(dirname);
-	if (name_len < dirname_len)
-		res = -1;
-	else if (name_len > dirname_len)
-		res = 1;
-	else 
-		res = strcmp(name, dirname);
-	free(dirname);
-	if (res == 0)
-		callback(user_data, *dir);
-	if (res < 0){
-		//check left
-		if (dir->_sidLeftSib != -1){
-			cfb_dir new_dir;
-			cfb_dir_by_sid(cfb, dir->_sidLeftSib, &new_dir, cfb_dir_callback);
-			return _cfb_dir_find(cfb, &new_dir, name, user_data, callback);
-		}
-	} else {
-		//check right
-		if (dir->_sidRightSib != -1){
-			cfb_dir new_dir;
-			cfb_dir_by_sid(cfb, dir->_sidRightSib, &new_dir, cfb_dir_callback);
-			return _cfb_dir_find(cfb, &new_dir, name, user_data, callback);
-		}	
-	}
-	return 0;
-}
-
-int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
-	return cfb_dir_by_sid(cfb, sid, dir, cfb_dir_callback);
-}
-
-int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
-		int (*callback)(void * user_data, cfb_dir dir))
-{
-	cfb_dir dir;
-	cfb_get_dir_by_sid(cfb, &dir, cfb->root._sidChild);
-	return _cfb_dir_find(cfb, &dir, name, user_data, callback);
-}
-
-int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
-	return cfb_dir_by_name(cfb, name, dir, cfb_dir_callback);
-}
-
 #define cfb_get_dir(cfb, dir, arg)\
 	_Generic((arg), \
 			char*: cfb_get_dir_by_name, \
 			int:   cfb_get_dir_by_sid \
 	)((cfb), (dir), (arg))	
 
-FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
-	ULONG i; // iterator
-	ULONG size = dir->_ulSize;
-	SECT s = dir->_sectStart;
-	ULONG off; //offset
-	int max_size;	
 
-	int p; // position in FAT/miniFAT chain
-
-	//check FAT or miniFAT
-	if (size < cfb->header._ulMiniSectorCutoff){
-		//use miniFAT
-		off = s << cfb->header._uMiniSectorShift;
-		max_size = 1 << cfb->header._uMiniSectorShift;
-		for (p = 0; p < cfb->header._csectMiniFat; ++p)
-			if (cfb->mfat[p] == s)
-				break;
-	}
-	else {
-		//use FAT
-		off = ++s << cfb->header._uSectorShift;
-		max_size = 1 << cfb->header._uSectorShift;
-		for (p = 0; p < cfb->header._csectFat; ++p)
-			if (cfb->fat[p] == s)
-				break;		
-	} 
-
-	//seek to start
-	fseek(cfb->fp, off, SEEK_SET);
-
-	FILE * stream = tmpfile();
-
-	//copy data
-	uint32_t ch;
-	int d; // size iterator in sector
-	for (i = 0; i < size; ++i, ++d){
-		//read data
-		if (fread(&ch, 4, 1, cfb->fp) != 1)
-			return NULL;
-
-		if (ch == EOF)
-			break;
-
-		if (d == max_size){
-			// get next FAT/miniFAT
-			if (size < cfb->header._ulMiniSectorCutoff)
-				fseek(cfb->fp, cfb->mfat[++p] << cfb->header._uMiniSectorShift, SEEK_SET);
-			else 
-				fseek(cfb->fp, (cfb->fat[++p] + 1) << cfb->header._csectFat, SEEK_SET);
-			d = 0;
-		}
-
-		//write data
-		if (fwrite(&ch, 4, 1, stream) != 1)
-			return NULL;
-	}
-
-	fseek(stream, 0, SEEK_SET);
-	return stream;	
-}
-
-FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
-	cfb_dir dir;
-	if (cfb_get_dir_by_sid(cfb, &dir, sid))
-		return NULL; //no dir
-	
-	return cfb_get_stream_by_dir(cfb, &dir);
-};
-
-FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
-	cfb_dir dir;
-	if (cfb_get_dir_by_name(cfb, &dir, name))
-		return NULL; //no dir
-	
-	return cfb_get_stream_by_dir(cfb, &dir);
-}
-
-#define cfb_get_stream(cfb, arg)\
-	_Generic((arg), \
-			char*:       cfb_get_stream_by_name, \
-			int:         cfb_get_stream_by_sid, \
-			cfb_dir *:   cfb_get_stream_by_dir \
-	)((cfb), (arg))	
 
 int cfb_get_dirs(struct cfb * cfb, void * user_data,
 			int(*callback)(void * user_data, cfb_dir dir))
