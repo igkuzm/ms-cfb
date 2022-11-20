@@ -2894,9 +2894,9 @@ int cfb_doc_get_text(
 
 	//Read the Clx from the Table Stream
 	struct Clx clx;
-	ret = clx_init(&clx, rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
-	if (ret)
-		return ret;
+	//ret = clx_init(&clx, rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
+	//if (ret)
+		//return ret;
 
 	//int i;
 	//for (i = 0; i < clx.Pcdt->PlcPcd->aPcdl; ++i) {

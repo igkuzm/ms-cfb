@@ -810,22 +810,33 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 		if (!mFAT)
 			return CFB_ALLOC_ERR;
 
+		FSINDEX index = cfb->root._sectStart; // start position in FAT chain
+	
+		DWORD ssize = 1 << cfb->header._uSectorShift;
+		DWORD sstart = ssize;
+	
+		//seek to start offset
+		fseek(cfb->fp, index * ssize + sstart, SEEK_SET);
+
 		int mfat_len = 0; //len of mFAT array
-
-		// get miniFAT stream SECT chain - located in ROOT DIR
-		FILE *mFATstream = cfb_get_stream_by_dir(cfb, &cfb->root);
-
-		//get chains
+		
+		//get data from stream
 		DWORD ch;
-		while(fread(&ch, 4, 1, mFATstream) == 1 && mfat_len < cfb->root._ulSize/4){
-			if (cfb->biteOrder)
-				ch = CFB_DWORD_SW(ch);
-
-			cfb->mfat[mfat_len++] = ch;
+		while (index != ENDOFCHAIN) {
+			for (i = 0; i < ssize/4; ++i) {
+				fread(&ch, 4, 1, fp);
+				if (cfb->biteOrder)
+					ch = CFB_DWORD_SW(ch);
+				mFAT[mfat_len++].n = ch;
+			}
+		
+			// get next FAT/miniFAT
+			index = FAT[index].n;
+			fseek(cfb->fp, index * ssize + sstart, SEEK_SET);
 		}
-		cfb->mfat_len = mfat_len;
 
-		fclose(mFATstream);
+		cfb->mfat = (SECT *)mFAT;
+		cfb->mfat_len = mfat_len;
 	}
 
 	return error;
