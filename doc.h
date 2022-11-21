@@ -2394,7 +2394,7 @@ struct Pcdt {
 	uint8_t clxt;    //(1 byte): This value MUST be 0x02
 	uint32_t lcb;    //(4 bytes): An unsigned integer that specifies the size, in bytes, of the 
 				     //PlcPcd structure.
-	struct PlcPcd *PlcPcd; //(variable): A PlcPcd structure. As with all Plc elements, the size 
+	struct PlcPcd PlcPcd; //(variable): A PlcPcd structure. As with all Plc elements, the size 
 						   //that is specified by lcb MUST result in a whole number of Pcd 
 						   //structures in this PlcPcd structure.
 };
@@ -2684,13 +2684,8 @@ void get_text(int size, Fib *fib, struct PlcPcd *PlcPcd){
 	printf("\n");
 }
 
-struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
-	printf("plcpcd_new len: %d\n", len);
+int plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, struct Fib *fib){
 	int i;
-	//allocate PlcPcd
-	struct PlcPcd *PlcPcd = malloc(sizeof(struct PlcPcd));
-	if (!PlcPcd)
-		return NULL;
 
 	//get lastCP
 	uint32_t lastCP = 
@@ -2707,14 +2702,13 @@ struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
 	PlcPcd->aCp = malloc(4);
 	if (!PlcPcd->aCp){
 		free(PlcPcd);	
-		return NULL;
+		return -1;
 	}
 
 	//read aCP
 	i=0;
 	uint32_t ch;
-	while(1){
-		fread(&ch, 4, 1, fib->Table);
+	while(fread(&ch, 4, 1, fib->Table) == 1){
 		//printf("CP: %d\n", ch);
 		PlcPcd->aCp[i++] = ch;
 		if (ch == lastCP)
@@ -2733,11 +2727,11 @@ struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
 	if (!PlcPcd->aPcd){
 		free(PlcPcd->aCp);	
 		free(PlcPcd);	
-		return NULL;
+		return -1;
 	}
 	fread(PlcPcd->aPcd, size, 1, fib->Table);
 
-	return PlcPcd;
+	return 0;
 }
 
 int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
@@ -2748,6 +2742,8 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
 	clx->Pcdt = malloc(sizeof(struct Pcdt));
 	if (!clx->Pcdt)
 		return DOC_ERR_ALLOC;		
+
+	struct PlcPcd PlcPcd;
 	
 	//get first byte
 	fseek(fib->Table, fcClx, SEEK_SET);
@@ -2785,8 +2781,7 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
 			return DOC_ERR_FILE;
 		
 		//read Pcdt->PlcPcd		
-		clx->Pcdt->PlcPcd = 
-				plcpcd_new(lcbClx - cbGrpprl, fib);
+		plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx - cbGrpprl, fib);
 	} 
 	else 
 		if (ch == 0x02){ //we have Pcdt only
@@ -2796,7 +2791,7 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
 			
 			if (clx->Pcdt->lcb == lcbClx-5)
 				//read Plc piecies
-				clx->Pcdt->PlcPcd = plcpcd_new(lcbClx-5, fib);
+				plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx-5, fib);
 			else 
 				goto cycle;
 		} 
