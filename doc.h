@@ -2887,6 +2887,7 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
  * 8. If PlcPcd.aCp[i] is 0, then the first character of the paragraph is at character position 
  * 0. Leave the algorithm.
  * 9. Set cp to PlcPcd.aCp[i]. Set i to i - 1. Go to step 2.
+ *
  * To find the character position of the last character in the paragraph that contains a given 
  * character position cp:
  * 1. Follow the algorithm from Retrieving Text up to and including step 3 to find i. Also 
