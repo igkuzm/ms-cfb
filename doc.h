@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 20.11.2022
+ * Last Modified Date: 21.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -2248,7 +2248,8 @@ typedef struct Fib
  * 3.  Read Fib.csw.
  * 4.  Read the minimum of Fib.csw * 2 bytes and the size, in bytes, of the in-memory version of 
  *     FibRgW97 into FibRgW97.
- * 5.  If the application expects fewer bytes than indicated by Fib.csw, advance by the difference thereby skipping the unknown portion of FibRgW97.
+ * 5.  If the application expects fewer bytes than indicated by Fib.csw, advance by the difference
+ *     thereby skipping the unknown portion of FibRgW97.
  * 6.  Read Fib.cslw.
  * 7.  Read the minimum of Fib.cslw * 4 bytes and the size, in bytes, of the in-memory version of
  *     FibRgLw97 into FibRgLw97.
@@ -2550,7 +2551,7 @@ struct FcCompressed {
 };
 bool FcCompressed(struct FcCompressed fc){
 	///* TODO: byte order */
-	if ((fc.fc & 0x40000000) == 0x40000000)
+	if ((fc.fc & 0x40000000) == 0x40000000) //if compressed - then ANSI
 		return true;
 	return false;
 };
@@ -2581,7 +2582,7 @@ struct Pcd {
  * contain duplicate CPs.
  */
 struct PlcPcd {
-	uint32_t *aCP; //(variable): An array of CPs that specifies the starting points of text 
+	uint32_t *aCp; //(variable): An array of CPs that specifies the starting points of text 
 				   //ranges. The end of each range is the beginning of the next range. All CPs 
 				   //MUST be greater than or equal to zero. If any of the fields ccpFtn, ccpHdd, 
 				   //ccpAtn, ccpEdn, ccpTxbx, or ccpHdrTxbx from FibRgLw97 are nonzero, then the 
@@ -2627,6 +2628,25 @@ struct Clx {
 	struct Pcdt *Pcdt; //(variable): A Pcdt.
 };
 
+char *unicode_to_utf8(uint16_t *in, int len){
+	char *out = malloc(2*len);	
+	int i, k = 0;
+	for (i = 0; i < len; ++i) {
+		char buf[2];
+		buf[0] = in[i];
+		buf[1] = in[i+1];	
+		if (buf[1] == 0) { //ANSI
+			if(buf[0] >= 32)
+				out[k++] = buf[0];
+		}
+		else {
+				
+		}
+	}
+	out[k] = 0;
+	return out;
+}
+
 struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
 	printf("plcpcd_new len: %d\n", len);
 	int i;
@@ -2646,10 +2666,9 @@ struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
 	
 	lastCP += (lastCP != 0) + fib->rgLw97->ccpText;
 
-	printf("lastCP: %d\n", lastCP);
 	//allocate aCP
-	PlcPcd->aCP = malloc(4*lastCP);
-	if (!PlcPcd->aCP){
+	PlcPcd->aCp = malloc(4);
+	if (!PlcPcd->aCp){
 		free(PlcPcd);	
 		return NULL;
 	}
@@ -2657,56 +2676,157 @@ struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
 	//read aCP
 	i=0;
 	uint32_t ch;
-	while(fread(&ch, 4, 1, fib->Table) == 1 && ch != lastCP){
+	while(1){
+		fread(&ch, 4, 1, fib->Table);
 		//printf("CP: %d\n", ch);
-		PlcPcd->aCP[i++] = ch;	
+		PlcPcd->aCp[i++] = ch;
+		if (ch == lastCP)
+			break;
+
+		//realloc aCp
+		void *ptr = realloc(PlcPcd->aCp, (i+1)*4);
+		if(!ptr)
+			break;
+		PlcPcd->aCp = ptr;
 	}
 
 	//read PCD
-	uint32_t size = len - i;
-	printf("PCD size: %d\n", size);
+	uint32_t size = len - i*4;
 	PlcPcd->aPcd = malloc(size);
 	if (!PlcPcd->aPcd){
-		free(PlcPcd->aCP);	
+		free(PlcPcd->aCp);	
 		free(PlcPcd);	
 		return NULL;
 	}
-	if (fread(PlcPcd->aPcd, size, 1, fib->Table) != 1){
-		free(PlcPcd->aCP);	
-		free(PlcPcd->aPcd);	
-		free(PlcPcd);	
-		return NULL;		
-	}
-	PlcPcd->aPcdl = size/8;
-	printf("PlcPcd->aPcdl: %d\n", PlcPcd->aPcdl);
+	fread(PlcPcd->aPcd, size, 1, fib->Table);
 
-	for (i = 0; i < size/8; i++) {
-		struct FcCompressed fc = PlcPcd->aPcd[i].fc;
-		printf("FC: %x, ", fc.fc);
-
-		DWORD value = FcValue(fc);	
-		DWORD len = PlcPcd->aCP[i + 1] - PlcPcd->aCP[i]; 
-		printf("LEN: %d\n", len);
+	//get text
+	printf("TEXT: \n");
+	for (i = 0; i < size/8; ++i) {
+/*
+ * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
+ * WordDocument Stream of the text at character position PlcPcd.aCp[i].
+ */
+		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
+		
+		DWORD off = FcValue(fc); //offset
+		DWORD lcb = PlcPcd->aCp[i+1] - PlcPcd->aCp[i];
 		
 		if (FcCompressed(fc)){
-			value /= 2;
-			char buf[len + 1];
-			fseek(fib->WordDocument, value, SEEK_SET);
-			fread(buf, len, 1, fib->WordDocument);
-			printf("TEXT: %s\n", buf);
+/*
+ * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
+ * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
+ * one of the special values in the table defined in the description of FcCompressed.fc. This is 
+ * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
+ * in the WordDocument Stream and each character occupies one byte.
+ */
+			off /= 2;
+			fseek(fib->WordDocument, off, SEEK_SET);	
+			char str[lcb + 1];
+			fread(str, lcb, 1, fib->WordDocument);
+			str[lcb] = 0;
+			printf("%s", str);
 		} else {
-			len *= 2;
-			uint16_t buf[len];
-			fseek(fib->WordDocument, value, SEEK_SET);
-			fread(buf, len, 1, fib->WordDocument);
-			printf("TEXT:\n");			
-			int k;
-			for (k = 0; k < 4; ++k) {
-				printf("%x ", buf[k]);
+/*
+ * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
+ * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
+ * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
+ * WordDocument Stream and each character occupies two bytes.
+ */
+			WORD u[lcb];
+			fseek(fib->WordDocument, off, SEEK_SET);	
+			fread(u, lcb, 2, fib->WordDocument);
+			char str[2*lcb];
+			if (_utf16_to_utf8(u, lcb, str))
+				//printf("%s", str);
+			for (int k = 0; k < 2*lcb; ++k) {
+				printf("%c", str[k]);
 			}
-			printf("\n");
+			//printf("%s", str);
+			
 		}
-	}	
+	}
+	printf("\n");
+
+	//struct FcCompressed fc;
+	//int l = size/8; i = 0;
+	//while (fread(&fc, 8, 1, fib->Table) == 1 && l > 0) {
+		
+		//printf("*****************************\n");
+		
+		//DWORD len = PlcPcd->aCP[i + 1] - PlcPcd->aCP[1];
+		//printf("LEN: %d\n", len);
+		
+		//PlcPcd->aPcd[i++].fc = fc;
+		//printf("FC: %x\n", fc.fc);
+		//printf("Compressed: %s\n", FcCompressed(fc)?"true":"false");
+		//printf("FC V: %x\n", FcValue(fc));
+		//l--;
+
+		//DWORD off = FcValue(fc); //offset of chars	
+		
+		//if (FcCompressed(fc)) {
+			//off /= 2;
+			//char text[len + 1];
+			//fseek(fib->WordDocument, off, SEEK_SET);
+			//fread(text, len, 1, fib->WordDocument);
+			//text[len] = 0;
+			//printf("TEXT: %s\n", text);
+		//} else {
+			//len *= 2;
+			//uint16_t unicode[len];
+			//fseek(fib->WordDocument, off, SEEK_SET);
+			//fread(unicode, len, 2, fib->WordDocument);
+			
+			//printf("TEXT: ");
+			//for (int k = 0; k < len; ++k) {
+				//char str[4];
+				//_utf16_to_utf8(&unicode[k], 1, str);
+				//printf("%s", str);
+			//}
+			//printf("\n");
+		//}
+		
+		//printf("*****************************\n");
+	//}
+
+
+	//if (fread(PlcPcd->aPcd, size, 1, fib->Table) != 1){
+		//free(PlcPcd->aCP);	
+		//free(PlcPcd->aPcd);	
+		//free(PlcPcd);	
+		//return NULL;		
+	//}
+	//PlcPcd->aPcdl = size/8;
+	//printf("PlcPcd->aPcdl: %d\n", PlcPcd->aPcdl);
+
+	//for (i = 0; i < size/8; i++) {
+		//struct FcCompressed fc = PlcPcd->aPcd[i].fc;
+		//printf("FC: %x, ", fc.fc);
+
+		//DWORD value = FcValue(fc);	
+		//DWORD len = PlcPcd->aCP[i + 1] - PlcPcd->aCP[i]; 
+		//printf("LEN: %d\n", len);
+		
+		//if (FcCompressed(fc)){
+			//value /= 2;
+			//char buf[len + 1];
+			//fseek(fib->WordDocument, value, SEEK_SET);
+			//fread(buf, len, 1, fib->WordDocument);
+			//printf("TEXT: %s\n", buf);
+		//} else {
+			//len *= 2;
+			//uint16_t buf[len];
+			//fseek(fib->WordDocument, value, SEEK_SET);
+			//fread(buf, len, 1, fib->WordDocument);
+			//printf("TEXT:\n");			
+			//int k;
+			//for (k = 0; k < 4; ++k) {
+				//printf("%x ", buf[k]);
+			//}
+			//printf("\n");
+		//}
+	//}	
 
 	return PlcPcd;
 }
@@ -2763,14 +2883,12 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
 		clx->Pcdt->clxt = ch;
 		//read lcb;
 		fread(&(clx->Pcdt->lcb), 4, 1, fib->Table);
-		printf("PlcPcd size: %d\n", clx->Pcdt->lcb);
-		if (clx->Pcdt->lcb != lcbClx-5){
-			free(clx->RgPrc);
-			free(clx->Pcdt);
-			clx_init(clx, ++fcClx, --lcbClx, fib);
-		} else 
+		
+		if (clx->Pcdt->lcb == lcbClx-5)
 			//read Plc piecies
 			clx->Pcdt->PlcPcd = plcpcd_new(lcbClx-5, fib);
+		else 
+			goto cycle;
 	} else { //error?
 			 //cycle
 		//free(clx->RgPrc);
@@ -2894,7 +3012,7 @@ int cfb_doc_get_text(
 
 	//Read the Clx from the Table Stream
 	struct Clx clx;
-	//ret = clx_init(&clx, rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
+	ret = clx_init(&clx, rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
 	//if (ret)
 		//return ret;
 

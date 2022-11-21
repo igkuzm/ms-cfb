@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 20.11.2022
+ * Last Modified Date: 21.11.2022
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
