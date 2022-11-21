@@ -2213,224 +2213,6 @@ typedef struct FibRgCswNewData2007
 } FibRgCswNewData2007;
 
 /*
- * FIB
- * The Fib structure is located at offset 0 of the WordDocument Stream.
- */
-
-typedef struct Fib 
-{
-	FibBase *base;        //MUST be present and has fixed size
-	uint16_t csw;         //(2 bytes): An unsigned integer that specifies the count of 16-bit 
-						  //values corresponding to fibRgW that follow. MUST be 0x000E. 
-	FibRgW97 *rgW97;      //Fib.csw * 2 bytes
-    uint16_t cslw;        //(2 bytes): An unsigned integer that specifies the count of 32-bit 
-						  //values corresponding to fibRgLw that follow. MUST be 0x0016. 
-	FibRgLw97 *rgLw97;    //Fib.cslw * 4 bytes
-	uint16_t cbRgFcLcb;   //(2 bytes): An unsigned integer that specifies the count of 64-bit 
-						  //values corresponding to fibRgFcLcbBlob that follow. This MUST be one 
-						  //of the following values, depending on the value of nFib.
-	uint32_t *rgFcLcb;    //Fib.cbRgFcLcb * 8 bytes
-	uint16_t cswNew;      //(2 bytes): An unsigned integer that specifies the count of 16-bit 
-						  //values corresponding to fibRgCswNew that follow. This MUST be one of 
-						  //the following values, depending on the value of nFib. 
-	FibRgCswNew *rgCswNew;
-	FILE *WordDocument;   //document stream
-	FILE *Table;          //table stream
-} Fib;
-
-/*
- * How to read the FIB
- * The Fib structure is located at offset 0 of the WordDocument Stream. Given the variable size of
- * the Fib, the proper way to load it is the following:
- * 1.  Set all bytes of the in-memory version of the Fib being used to 0. It is recommended to use 
- *     the largest version of the Fib structure as the in-memory version.
- * 2.  Read the entire FibBase, which MUST be present and has fixed size.
- * 3.  Read Fib.csw.
- * 4.  Read the minimum of Fib.csw * 2 bytes and the size, in bytes, of the in-memory version of 
- *     FibRgW97 into FibRgW97.
- * 5.  If the application expects fewer bytes than indicated by Fib.csw, advance by the difference
- *     thereby skipping the unknown portion of FibRgW97.
- * 6.  Read Fib.cslw.
- * 7.  Read the minimum of Fib.cslw * 4 bytes and the size, in bytes, of the in-memory version of
- *     FibRgLw97 into FibRgLw97.
- * 8.  If the application expects fewer bytes than indicated by Fib.cslw, advance by the difference
- *     thereby skipping the unknown portion of FibRgLw97.
- * 9.  Read Fib.cbRgFcLcb.
- * 10. Read the minimum of Fib.cbRgFcLcb * 8 bytes and the size, in bytes, of the in-memory 
- *     version of FibRgFcLcb into FibRgFcLcb.
- * 11. If the application expects fewer bytes than indicated by Fib.cbRgFcLcb, advance by the 
- *     difference, thereby skipping the unknown portion of FibRgFcLcb.
- * 12. Read Fib.cswNew.
- * 13. Read the minimum of Fib.cswNew * 2 bytes and the size, in bytes, of the in-memory version 
- *     of FibRgCswNew into FibRgCswNew.
-*/
-
-FILE *table_stream(Fib *fib, struct cfb *cfb){
-	printf("FibBase G: %x\n", FibBaseG(fib->base));
-	if (FibBaseG(fib->base))
-		return cfb_get_stream(cfb, "1Table");
-	return cfb_get_stream(cfb, "0Table");
-}
-
-int fib_init(Fib *fib, struct cfb *cfb){
-	fib->base = NULL;
-	fib->csw = 0;
-	fib->rgW97 = NULL;
-	fib->cslw = 0;
-	fib->rgLw97 = NULL;
-	fib->cbRgFcLcb = 0;
-	fib->rgFcLcb = NULL;
-	fib->cswNew = 0;
-	fib->rgCswNew = NULL;
-
-	FILE *fp = cfb_get_stream(cfb, "WordDocument");
-	if (!fp)	
-		return DOC_ERR_FILE;
-
-	fseek(fp, 0, SEEK_SET);
-	
-	//allocate fibbase
-	fib->base = malloc(32);
-	if (!fib->base)
-		return DOC_ERR_ALLOC;
-
-	//read fibbase
-	if (fread(fib->base, 32, 1, fp) != 1){
-		free(fib->base);
-		return DOC_ERR_FILE;
-	}
-
-	//check wIdent
-	printf("wIdent: %x\n", fib->base->wIdent);
-	if (fib->base->wIdent != 0xA5EC){
-		free(fib->base);
-		return DOC_ERR_HEADER;
-	}	
-
-	//read Fib.csw
-	if (fread(&(fib->csw), 2, 1, fp) != 1){
-		free(fib->base);
-		return DOC_ERR_FILE;
-	}
-
-	//check csw
-	printf("csw: %x\n", fib->csw);
-	if (fib->csw != 14) {
-		free(fib->base);
-		return DOC_ERR_HEADER;
-	}
-
-	//allocate FibRgW97
-	fib->rgW97 = malloc(28);
-	if (!fib->rgW97){
-		free(fib->base);
-		return DOC_ERR_ALLOC;
-	}
-
-	//read FibRgW97
-	if (fread(fib->rgW97, 28, 1, fp) != 1){
-		free(fib->base);
-		free(fib->rgW97);
-		return DOC_ERR_FILE;
-	}
-
-	//read Fib.cslw
-	if (fread(&(fib->cslw), 2, 1, fp) != 1){
-		free(fib->base);
-		free(fib->rgW97);
-		return DOC_ERR_FILE;
-	}
-
-	//check csw
-	printf("cslw: %x\n", fib->cslw);
-	if (fib->cslw != 22) {
-		free(fib->base);
-		free(fib->rgW97);
-		return DOC_ERR_HEADER;
-	}	
-
-	//allocate FibRgLw97
-	fib->rgLw97 = malloc(88);
-	if (!fib->rgLw97){
-		free(fib->base);
-		free(fib->rgW97);
-		return DOC_ERR_ALLOC;
-	}
-	
-	//read FibRgLw97
-	if (fread(fib->rgLw97, 88, 1, fp) != 1){
-		free(fib->base);
-		free(fib->rgW97);
-		free(fib->rgLw97);
-		return DOC_ERR_FILE;
-	}	
-	
-	//read Fib.cbRgFcLcb
-	if (fread(&(fib->cbRgFcLcb), 2, 1, fp) != 1){
-		free(fib->base);
-		free(fib->rgW97);
-		free(fib->rgLw97);
-		return DOC_ERR_FILE;
-	}
-	
-	printf("cbRgFcLcb: %x\n", fib->cbRgFcLcb);
-
-	//allocate rgFcLcb
-	fib->rgFcLcb = malloc(fib->cbRgFcLcb*8);
-	if (!fib->rgFcLcb){
-		free(fib->base);
-		free(fib->rgW97);
-		free(fib->rgLw97);
-		return DOC_ERR_ALLOC;
-	}	
-
-	
-	//read rgFcLcb
-	if (fread(fib->rgFcLcb, 8, fib->cbRgFcLcb, fp) != fib->cbRgFcLcb){
-		free(fib->base);
-		free(fib->rgW97);
-		free(fib->rgLw97);
-		free(fib->rgFcLcb);
-		return DOC_ERR_FILE;
-	}	
-
-	//read Fib.cswNew
-	fread(&(fib->cswNew), 2, 1, fp);
-	printf("cswNew: %x\n", fib->cswNew);
-
-	if (fib->cswNew > 0){
-		//allocate FibRgCswNew
-		fib->rgCswNew = malloc(fib->cswNew * 2);
-		if (!fib->rgFcLcb){
-			free(fib->base);
-			free(fib->rgW97);
-			free(fib->rgLw97);
-			free(fib->rgFcLcb);
-			return DOC_ERR_ALLOC;
-		}	
-
-		//read FibRgCswNew
-		if (fread(fib->rgCswNew, 2, fib->cswNew, fp) != fib->cswNew){
-			free(fib->base);
-			free(fib->rgW97);
-			free(fib->rgLw97);
-			free(fib->rgFcLcb);
-			return DOC_ERR_FILE;
-		}	
-	}
-
-	fib->WordDocument = fp;
-	
-	fib->Table = table_stream(fib, cfb);
-	if (!fib->Table){
-		printf("Can't get Table stream\n"); 
-		return DOC_ERR_FILE;
-	}
-
-	return 0;
-}
-
-/*
  * Prl
  * The Prl structure is a Sprm that is followed by an operand. The Sprm specifies a property to 
  * modify, and the operand specifies the new value.
@@ -2628,6 +2410,280 @@ struct Clx {
 	struct Pcdt *Pcdt; //(variable): A Pcdt.
 };
 
+
+/*
+ * FIB
+ * The Fib structure is located at offset 0 of the WordDocument Stream.
+ */
+
+typedef struct Fib 
+{
+	FibBase *base;        //MUST be present and has fixed size
+	uint16_t csw;         //(2 bytes): An unsigned integer that specifies the count of 16-bit 
+						  //values corresponding to fibRgW that follow. MUST be 0x000E. 
+	FibRgW97 *rgW97;      //Fib.csw * 2 bytes
+    uint16_t cslw;        //(2 bytes): An unsigned integer that specifies the count of 32-bit 
+						  //values corresponding to fibRgLw that follow. MUST be 0x0016. 
+	FibRgLw97 *rgLw97;    //Fib.cslw * 4 bytes
+	uint16_t cbRgFcLcb;   //(2 bytes): An unsigned integer that specifies the count of 64-bit 
+						  //values corresponding to fibRgFcLcbBlob that follow. This MUST be one 
+						  //of the following values, depending on the value of nFib.
+	uint32_t *rgFcLcb;    //Fib.cbRgFcLcb * 8 bytes
+	uint16_t cswNew;      //(2 bytes): An unsigned integer that specifies the count of 16-bit 
+						  //values corresponding to fibRgCswNew that follow. This MUST be one of 
+						  //the following values, depending on the value of nFib. 
+	FibRgCswNew *rgCswNew;
+	FILE *WordDocument;   //document stream
+	FILE *Table;          //table stream
+	
+	struct Clx clx;       //clx data
+} Fib;
+
+/*
+ * How to read the FIB
+ * The Fib structure is located at offset 0 of the WordDocument Stream. Given the variable size of
+ * the Fib, the proper way to load it is the following:
+ * 1.  Set all bytes of the in-memory version of the Fib being used to 0. It is recommended to use 
+ *     the largest version of the Fib structure as the in-memory version.
+ * 2.  Read the entire FibBase, which MUST be present and has fixed size.
+ * 3.  Read Fib.csw.
+ * 4.  Read the minimum of Fib.csw * 2 bytes and the size, in bytes, of the in-memory version of 
+ *     FibRgW97 into FibRgW97.
+ * 5.  If the application expects fewer bytes than indicated by Fib.csw, advance by the difference
+ *     thereby skipping the unknown portion of FibRgW97.
+ * 6.  Read Fib.cslw.
+ * 7.  Read the minimum of Fib.cslw * 4 bytes and the size, in bytes, of the in-memory version of
+ *     FibRgLw97 into FibRgLw97.
+ * 8.  If the application expects fewer bytes than indicated by Fib.cslw, advance by the difference
+ *     thereby skipping the unknown portion of FibRgLw97.
+ * 9.  Read Fib.cbRgFcLcb.
+ * 10. Read the minimum of Fib.cbRgFcLcb * 8 bytes and the size, in bytes, of the in-memory 
+ *     version of FibRgFcLcb into FibRgFcLcb.
+ * 11. If the application expects fewer bytes than indicated by Fib.cbRgFcLcb, advance by the 
+ *     difference, thereby skipping the unknown portion of FibRgFcLcb.
+ * 12. Read Fib.cswNew.
+ * 13. Read the minimum of Fib.cswNew * 2 bytes and the size, in bytes, of the in-memory version 
+ *     of FibRgCswNew into FibRgCswNew.
+*/
+
+FILE *table_stream(Fib *fib, struct cfb *cfb){
+	printf("FibBase G: %x\n", FibBaseG(fib->base));
+	if (FibBaseG(fib->base))
+		return cfb_get_stream(cfb, "1Table");
+	return cfb_get_stream(cfb, "0Table");
+}
+
+int fib_init(Fib *fib, struct cfb *cfb){
+	fib->base = NULL;
+	fib->csw = 0;
+	fib->rgW97 = NULL;
+	fib->cslw = 0;
+	fib->rgLw97 = NULL;
+	fib->cbRgFcLcb = 0;
+	fib->rgFcLcb = NULL;
+	fib->cswNew = 0;
+	fib->rgCswNew = NULL;
+
+	FILE *fp = cfb_get_stream(cfb, "WordDocument");
+	if (!fp)	
+		return DOC_ERR_FILE;
+
+	fseek(fp, 0, SEEK_SET);
+	
+	//allocate fibbase
+	fib->base = malloc(32);
+	if (!fib->base)
+		return DOC_ERR_ALLOC;
+
+	//read fibbase
+	if (fread(fib->base, 32, 1, fp) != 1){
+		free(fib->base);
+		return DOC_ERR_FILE;
+	}
+
+	//check wIdent
+	printf("wIdent: %x\n", fib->base->wIdent);
+	if (fib->base->wIdent != 0xA5EC){
+		free(fib->base);
+		return DOC_ERR_HEADER;
+	}	
+
+	//read Fib.csw
+	if (fread(&(fib->csw), 2, 1, fp) != 1){
+		free(fib->base);
+		return DOC_ERR_FILE;
+	}
+
+	//check csw
+	printf("csw: %x\n", fib->csw);
+	if (fib->csw != 14) {
+		free(fib->base);
+		return DOC_ERR_HEADER;
+	}
+
+	//allocate FibRgW97
+	fib->rgW97 = malloc(28);
+	if (!fib->rgW97){
+		free(fib->base);
+		return DOC_ERR_ALLOC;
+	}
+
+	//read FibRgW97
+	if (fread(fib->rgW97, 28, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_FILE;
+	}
+
+	//read Fib.cslw
+	if (fread(&(fib->cslw), 2, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_FILE;
+	}
+
+	//check csw
+	printf("cslw: %x\n", fib->cslw);
+	if (fib->cslw != 22) {
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_HEADER;
+	}	
+
+	//allocate FibRgLw97
+	fib->rgLw97 = malloc(88);
+	if (!fib->rgLw97){
+		free(fib->base);
+		free(fib->rgW97);
+		return DOC_ERR_ALLOC;
+	}
+	
+	//read FibRgLw97
+	if (fread(fib->rgLw97, 88, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		return DOC_ERR_FILE;
+	}	
+	
+	//read Fib.cbRgFcLcb
+	if (fread(&(fib->cbRgFcLcb), 2, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		return DOC_ERR_FILE;
+	}
+	
+	printf("cbRgFcLcb: %x\n", fib->cbRgFcLcb);
+
+	//allocate rgFcLcb
+	fib->rgFcLcb = malloc(fib->cbRgFcLcb*8);
+	if (!fib->rgFcLcb){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		return DOC_ERR_ALLOC;
+	}	
+
+	
+	//read rgFcLcb
+	if (fread(fib->rgFcLcb, 8, fib->cbRgFcLcb, fp) != fib->cbRgFcLcb){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		free(fib->rgFcLcb);
+		return DOC_ERR_FILE;
+	}	
+
+	//read Fib.cswNew
+	fread(&(fib->cswNew), 2, 1, fp);
+	printf("cswNew: %x\n", fib->cswNew);
+
+	if (fib->cswNew > 0){
+		//allocate FibRgCswNew
+		fib->rgCswNew = malloc(fib->cswNew * 2);
+		if (!fib->rgFcLcb){
+			free(fib->base);
+			free(fib->rgW97);
+			free(fib->rgLw97);
+			free(fib->rgFcLcb);
+			return DOC_ERR_ALLOC;
+		}	
+
+		//read FibRgCswNew
+		if (fread(fib->rgCswNew, 2, fib->cswNew, fp) != fib->cswNew){
+			free(fib->base);
+			free(fib->rgW97);
+			free(fib->rgLw97);
+			free(fib->rgFcLcb);
+			return DOC_ERR_FILE;
+		}	
+	}
+
+	fib->WordDocument = fp;
+	
+	fib->Table = table_stream(fib, cfb);
+	if (!fib->Table){
+		printf("Can't get Table stream\n"); 
+		return DOC_ERR_FILE;
+	}
+
+	return 0;
+}
+
+
+void get_text(int size, Fib *fib, struct PlcPcd *PlcPcd){
+	int i;
+
+	//get text
+	printf("TEXT: \n");
+	for (i = 0; i < size/8; ++i) {
+/*
+ * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
+ * WordDocument Stream of the text at character position PlcPcd.aCp[i].
+ */
+		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
+		
+		DWORD off = FcValue(fc); //offset
+		DWORD lcb = PlcPcd->aCp[i+1] - PlcPcd->aCp[i];
+		
+		if (FcCompressed(fc)){
+/*
+ * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
+ * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
+ * one of the special values in the table defined in the description of FcCompressed.fc. This is 
+ * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
+ * in the WordDocument Stream and each character occupies one byte.
+ */
+			off /= 2;
+			fseek(fib->WordDocument, off, SEEK_SET);	
+			char str[lcb + 1];
+			fread(str, lcb, 1, fib->WordDocument);
+			str[lcb] = 0;
+			printf("%s", str);
+		} else {
+/*
+ * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
+ * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
+ * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
+ * WordDocument Stream and each character occupies two bytes.
+ */
+			WORD u[lcb];
+			fseek(fib->WordDocument, off, SEEK_SET);	
+			fread(u, lcb, 2, fib->WordDocument);
+			char str[2*lcb];
+			if (_utf16_to_utf8(u, lcb, str))
+				//printf("%s", str);
+			for (int k = 0; k < 2*lcb; ++k) {
+				printf("%c", str[k]);
+			}
+			//printf("%s", str);
+			
+		}
+	}
+	printf("\n");
+}
+
 char *unicode_to_utf8(uint16_t *in, int len){
 	char *out = malloc(2*len);	
 	int i, k = 0;
@@ -2700,134 +2756,6 @@ struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
 	}
 	fread(PlcPcd->aPcd, size, 1, fib->Table);
 
-	//get text
-	printf("TEXT: \n");
-	for (i = 0; i < size/8; ++i) {
-/*
- * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
- * WordDocument Stream of the text at character position PlcPcd.aCp[i].
- */
-		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
-		
-		DWORD off = FcValue(fc); //offset
-		DWORD lcb = PlcPcd->aCp[i+1] - PlcPcd->aCp[i];
-		
-		if (FcCompressed(fc)){
-/*
- * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
- * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
- * one of the special values in the table defined in the description of FcCompressed.fc. This is 
- * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
- * in the WordDocument Stream and each character occupies one byte.
- */
-			off /= 2;
-			fseek(fib->WordDocument, off, SEEK_SET);	
-			char str[lcb + 1];
-			fread(str, lcb, 1, fib->WordDocument);
-			str[lcb] = 0;
-			printf("%s", str);
-		} else {
-/*
- * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
- * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
- * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
- * WordDocument Stream and each character occupies two bytes.
- */
-			WORD u[lcb];
-			fseek(fib->WordDocument, off, SEEK_SET);	
-			fread(u, lcb, 2, fib->WordDocument);
-			char str[2*lcb];
-			if (_utf16_to_utf8(u, lcb, str))
-				//printf("%s", str);
-			for (int k = 0; k < 2*lcb; ++k) {
-				printf("%c", str[k]);
-			}
-			//printf("%s", str);
-			
-		}
-	}
-	printf("\n");
-
-	//struct FcCompressed fc;
-	//int l = size/8; i = 0;
-	//while (fread(&fc, 8, 1, fib->Table) == 1 && l > 0) {
-		
-		//printf("*****************************\n");
-		
-		//DWORD len = PlcPcd->aCP[i + 1] - PlcPcd->aCP[1];
-		//printf("LEN: %d\n", len);
-		
-		//PlcPcd->aPcd[i++].fc = fc;
-		//printf("FC: %x\n", fc.fc);
-		//printf("Compressed: %s\n", FcCompressed(fc)?"true":"false");
-		//printf("FC V: %x\n", FcValue(fc));
-		//l--;
-
-		//DWORD off = FcValue(fc); //offset of chars	
-		
-		//if (FcCompressed(fc)) {
-			//off /= 2;
-			//char text[len + 1];
-			//fseek(fib->WordDocument, off, SEEK_SET);
-			//fread(text, len, 1, fib->WordDocument);
-			//text[len] = 0;
-			//printf("TEXT: %s\n", text);
-		//} else {
-			//len *= 2;
-			//uint16_t unicode[len];
-			//fseek(fib->WordDocument, off, SEEK_SET);
-			//fread(unicode, len, 2, fib->WordDocument);
-			
-			//printf("TEXT: ");
-			//for (int k = 0; k < len; ++k) {
-				//char str[4];
-				//_utf16_to_utf8(&unicode[k], 1, str);
-				//printf("%s", str);
-			//}
-			//printf("\n");
-		//}
-		
-		//printf("*****************************\n");
-	//}
-
-
-	//if (fread(PlcPcd->aPcd, size, 1, fib->Table) != 1){
-		//free(PlcPcd->aCP);	
-		//free(PlcPcd->aPcd);	
-		//free(PlcPcd);	
-		//return NULL;		
-	//}
-	//PlcPcd->aPcdl = size/8;
-	//printf("PlcPcd->aPcdl: %d\n", PlcPcd->aPcdl);
-
-	//for (i = 0; i < size/8; i++) {
-		//struct FcCompressed fc = PlcPcd->aPcd[i].fc;
-		//printf("FC: %x, ", fc.fc);
-
-		//DWORD value = FcValue(fc);	
-		//DWORD len = PlcPcd->aCP[i + 1] - PlcPcd->aCP[i]; 
-		//printf("LEN: %d\n", len);
-		
-		//if (FcCompressed(fc)){
-			//value /= 2;
-			//char buf[len + 1];
-			//fseek(fib->WordDocument, value, SEEK_SET);
-			//fread(buf, len, 1, fib->WordDocument);
-			//printf("TEXT: %s\n", buf);
-		//} else {
-			//len *= 2;
-			//uint16_t buf[len];
-			//fseek(fib->WordDocument, value, SEEK_SET);
-			//fread(buf, len, 1, fib->WordDocument);
-			//printf("TEXT:\n");			
-			//int k;
-			//for (k = 0; k < 4; ++k) {
-				//printf("%x ", buf[k]);
-			//}
-			//printf("\n");
-		//}
-	//}	
-
 	return PlcPcd;
 }
 
@@ -2880,21 +2808,18 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
 	} 
 	else 
 		if (ch == 0x02){ //we have Pcdt only
-		clx->Pcdt->clxt = ch;
-		//read lcb;
-		fread(&(clx->Pcdt->lcb), 4, 1, fib->Table);
-		
-		if (clx->Pcdt->lcb == lcbClx-5)
-			//read Plc piecies
-			clx->Pcdt->PlcPcd = plcpcd_new(lcbClx-5, fib);
-		else 
+			clx->Pcdt->clxt = ch;
+			//read lcb;
+			fread(&(clx->Pcdt->lcb), 4, 1, fib->Table);
+			
+			if (clx->Pcdt->lcb == lcbClx-5)
+				//read Plc piecies
+				clx->Pcdt->PlcPcd = plcpcd_new(lcbClx-5, fib);
+			else 
+				goto cycle;
+		} 
+		else { //error?
 			goto cycle;
-	} else { //error?
-			 //cycle
-		//free(clx->RgPrc);
-		//free(clx->Pcdt);
-		//clx_init(clx, ++fcClx, --lcbClx, fib);
-		//return DOC_ERR_HEADER;
 	}
 
 	return 0;
@@ -3011,31 +2936,9 @@ int cfb_doc_get_text(
 	printf("lcbClx: %d\n", lcbClx);
 
 	//Read the Clx from the Table Stream
-	struct Clx clx;
-	ret = clx_init(&clx, rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
-	//if (ret)
-		//return ret;
-
-	//int i;
-	//for (i = 0; i < clx.Pcdt->PlcPcd->aPcdl; ++i) {
-		//struct FcCompressed fc = clx.Pcdt->PlcPcd->aPcd[i].fc;
-		//uint32_t *aCP = clx.Pcdt->PlcPcd->aCP;
-		
-		//uint32_t value = FcCompressedValue(fc);
-		//uint32_t len = aCP[i + 1] -  aCP[i];
-
-		//uint32_t off; 
-		
-		//if (FcCompressed(fc)){ //this is ANSI
-			//off = value/2 + aCP[i + 1] -  aCP[i] - 1;
-			//fseek(fib.WordDocument, off, SEEK_SET);
-			//char ch = fgetc(fib.WordDocument);
-			////fread(&ch, 1, 1, fib.WordDocument);
-			//printf("%c", ch);
-		//}else {
-			//len *= 2;
-		//}	
-	//}
+	ret = clx_init(&(fib.clx), rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
+	if (ret)
+		return ret;
 
 	return 0;
 }
