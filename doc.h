@@ -2684,25 +2684,6 @@ void get_text(int size, Fib *fib, struct PlcPcd *PlcPcd){
 	printf("\n");
 }
 
-char *unicode_to_utf8(uint16_t *in, int len){
-	char *out = malloc(2*len);	
-	int i, k = 0;
-	for (i = 0; i < len; ++i) {
-		char buf[2];
-		buf[0] = in[i];
-		buf[1] = in[i+1];	
-		if (buf[1] == 0) { //ANSI
-			if(buf[0] >= 32)
-				out[k++] = buf[0];
-		}
-		else {
-				
-		}
-	}
-	out[k] = 0;
-	return out;
-}
-
 struct PlcPcd * plcpcd_new(uint32_t len, struct Fib *fib){
 	printf("plcpcd_new len: %d\n", len);
 	int i;
@@ -2773,38 +2754,39 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, struct Fib *fib){
 	uint8_t ch;
 	fread(&ch, 1, 1, fib->Table);
 	if (ch == 0x01){ //we have Prc array
-		goto cycle;
-		////read cbGrpprl.
-		//uint16_t cbGrpprl;
-		//if (fread(&cbGrpprl, 2, 1, fib->Table) != 1)
-			//return DOC_ERR_FILE;
-		////cbGrpprl specifies the size of GrpPrl, in bytes. 
-		////This value MUST be less than or equal to 0x3FA2
-		//if (cbGrpprl > 0x3FA2) //error
-			//return DOC_ERR_FILE;
-		//struct Prl *GrpPrl = malloc(cbGrpprl);
-		//if (!GrpPrl)
-			//return DOC_ERR_ALLOC;		
-		////read GrpPrl 
-		//if (fread(GrpPrl, cbGrpprl, 1, fib->Table) != 1)
-			//return DOC_ERR_FILE;
+		//read cbGrpprl.
+		uint16_t cbGrpprl;
+		if (fread(&cbGrpprl, 2, 1, fib->Table) != 1)
+			return DOC_ERR_FILE;
+/*
+ * cbGrpprl specifies the size of GrpPrl, in bytes. 
+ * This value MUST be less than or equal to 0x3FA2
+*/
+		if (cbGrpprl > 0x3FA2) //error
+			return DOC_ERR_FILE;
+		struct Prl *GrpPrl = malloc(cbGrpprl);
+		if (!GrpPrl)
+			return DOC_ERR_ALLOC;		
+		//read GrpPrl 
+		if (fread(GrpPrl, cbGrpprl, 1, fib->Table) != 1)
+			return DOC_ERR_FILE;
 		
-		//clx->RgPrc->clxt = ch;
-		//clx->RgPrc->data = malloc(sizeof(struct PrcData));
-		//if (!clx->RgPrc->data)
-			//return DOC_ERR_ALLOC;		
-		//clx->RgPrc->data->cbGrpprl = cbGrpprl;
-		//clx->RgPrc->data->GrpPrl = GrpPrl;
+		clx->RgPrc->clxt = ch;
+		clx->RgPrc->data = malloc(sizeof(struct PrcData));
+		if (!clx->RgPrc->data)
+			return DOC_ERR_ALLOC;		
+		clx->RgPrc->data->cbGrpprl = cbGrpprl;
+		clx->RgPrc->data->GrpPrl = GrpPrl;
 		
-		////check clx->Pcdt->clxt
-		//if (fread(&(clx->Pcdt->clxt), 1, 1, fib->Table) != 1)
-			//return DOC_ERR_FILE;
-		//if (clx->Pcdt->clxt != 0x02) //error
-			//return DOC_ERR_FILE;
+		//check clx->Pcdt->clxt
+		if (fread(&(clx->Pcdt->clxt), 1, 1, fib->Table) != 1)
+			return DOC_ERR_FILE;
+		if (clx->Pcdt->clxt != 0x02) //error
+			return DOC_ERR_FILE;
 		
-		////read Pcdt->PlcPcd		
-		//clx->Pcdt->PlcPcd = 
-				//plcpcd_new(lcbClx - cbGrpprl, fib);
+		//read Pcdt->PlcPcd		
+		clx->Pcdt->PlcPcd = 
+				plcpcd_new(lcbClx - cbGrpprl, fib);
 	} 
 	else 
 		if (ch == 0x02){ //we have Pcdt only
