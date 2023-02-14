@@ -2446,6 +2446,7 @@ typedef struct cfb_doc
 	
 	Fib  fib;             //File information block
 	struct Clx clx;       //clx data
+	uint32_t lastCp;	  //last Cp (character positions)
 	int nPcd;             //number of Pcd (piecies of text)
 } cfb_doc_t;
 
@@ -2632,7 +2633,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	int i;
 
 	//get lastCP
-	uint32_t lastCP = 
+	doc->lastCp = 
 			doc->fib.rgLw97->ccpFtn +
 			doc->fib.rgLw97->ccpHdd +
 			doc->fib.rgLw97->ccpAtn +
@@ -2640,7 +2641,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 			doc->fib.rgLw97->ccpTxbx +
 			doc->fib.rgLw97->ccpHdrTxbx;
 	
-	lastCP += (lastCP != 0) + doc->fib.rgLw97->ccpText;
+	doc->lastCp += (doc->lastCp != 0) + doc->fib.rgLw97->ccpText;
 
 	//allocate aCP
 	PlcPcd->aCp = malloc(4);
@@ -2655,7 +2656,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	while(fread(&ch, 4, 1, doc->Table) == 1){
 		//printf("CP: %d\n", ch);
 		PlcPcd->aCp[i++] = ch;
-		if (ch == lastCP)
+		if (ch == doc->lastCp)
 			break;
 
 		//realloc aCp
@@ -2795,6 +2796,59 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 		return ret;	
 
 	return 0;
+}
+void _get_text_new(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
+	// get char for each CP
+	uint32_t cp, i=0;
+	for (cp = 0; cp <= doc->lastCp; ++cp) {
+/*
+ * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
+ * PlcPcd.aCp[i] ≤ cp. As with all Plcs, the elements of PlcPcd.aCp are sorted in ascending order.
+ * Recall from the definition of a Plc that the aCp array has one more element than the aPcd array.
+ * Thus, if the last element of PlcPcd.aCp is less than or equal to cp, cp is outside the range of
+ * valid character positions in this document
+ */
+		// Find the largest i such that PlcPcd.aCp[i] ≤ cp
+		if (PlcPcd->aCp[i] > cp)
+			i++;
+
+/*
+ * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
+ * WordDocument Stream of the text at character position PlcPcd.aCp[i].
+ */
+		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
+		if (FcCompressed(fc)){
+/*
+ * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
+ * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
+ * one of the special values in the table defined in the description of FcCompressed.fc. This is 
+ * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
+ * in the WordDocument Stream and each character occupies one byte.
+ */			
+			//ANSI
+			char c;
+			DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
+			fseek(doc->WordDocument, off, SEEK_SET);	
+			fread(&c, 2, 1, doc->WordDocument);			
+			printf("%c", c);
+
+		} else {
+/*
+ * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
+ * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
+ * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
+ * WordDocument Stream and each character occupies two bytes.
+ */			
+			//UNICODE 16
+			DWORD off = FcValue(fc) + 2*(cp - PlcPcd->aCp[i]);
+			WORD u;
+			fseek(doc->WordDocument, off, SEEK_SET);	
+			fread(&u, 2, 1, doc->WordDocument);
+			char utf8[2];
+			_utf16_to_utf8(&u, 1, utf8);
+			printf("%s", utf8);
+		}
+	}
 }
 
 void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
@@ -2957,7 +3011,7 @@ int cfb_doc_get_text(
 		return ret;
 
 	//get text
-	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd));
+	_get_text_new(&doc, &(doc.clx.Pcdt->PlcPcd));
 
 	return 0;
 }
