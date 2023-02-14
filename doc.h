@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 13.12.2022
+ * Last Modified Date: 14.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -2476,161 +2476,158 @@ typedef struct cfb_doc
  *     of FibRgCswNew into FibRgCswNew.
 */
 
-int cfb_doc_fib_init(cfb_doc_t *doc, struct cfb *cfb){
-	Fib fib = doc->fib;
+int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 
-	FILE *fp = doc->WordDocument;
-
-	fib.base = NULL;
-	fib.csw = 0;
-	fib.rgW97 = NULL;
-	fib.cslw = 0;
-	fib.rgLw97 = NULL;
-	fib.cbRgFcLcb = 0;
-	fib.rgFcLcb = NULL;
-	fib.cswNew = 0;
-	fib.rgCswNew = NULL;
+	fib->base = NULL;
+	fib->csw = 0;
+	fib->rgW97 = NULL;
+	fib->cslw = 0;
+	fib->rgLw97 = NULL;
+	fib->cbRgFcLcb = 0;
+	fib->rgFcLcb = NULL;
+	fib->cswNew = 0;
+	fib->rgCswNew = NULL;
 
 	//allocate fibbase
-	fib.base = malloc(32);
-	if (!fib.base)
+	fib->base = malloc(32);
+	if (!fib->base)
 		return DOC_ERR_ALLOC;
 
 	//read fibbase
-	if (fread(fib.base, 32, 1, fp) != 1){
-		free(fib.base);
+	if (fread(fib->base, 32, 1, fp) != 1){
+		free(fib->base);
 		return DOC_ERR_FILE;
 	}
-
+	
 	//check wIdent
-	printf("wIdent: %x\n", fib.base->wIdent);
-	if (fib.base->wIdent != 0xA5EC){
-		free(fib.base);
+	/*printf("wIdent: %x\n", fib.base->wIdent);*/
+	if (fib->base->wIdent != 0xA5EC){
+		free(fib->base);
 		return DOC_ERR_HEADER;
 	}	
 
 	//read Fib.csw
-	if (fread(&(fib.csw), 2, 1, fp) != 1){
-		free(fib.base);
+	if (fread(&(fib->csw), 2, 1, fp) != 1){
+		free(fib->base);
 		return DOC_ERR_FILE;
 	}
 
 	//check csw
-	printf("csw: %x\n", fib.csw);
-	if (fib.csw != 14) {
-		free(fib.base);
+	/*printf("csw: %x\n", fib.csw);*/
+	if (fib->csw != 14) {
+		free(fib->base);
 		return DOC_ERR_HEADER;
 	}
 
 	//allocate FibRgW97
-	fib.rgW97 = malloc(28);
-	if (!fib.rgW97){
-		free(fib.base);
+	fib->rgW97 = malloc(28);
+	if (!fib->rgW97){
+		free(fib->base);
 		return DOC_ERR_ALLOC;
 	}
 
 	//read FibRgW97
-	if (fread(fib.rgW97, 28, 1, fp) != 1){
-		free(fib.base);
-		free(fib.rgW97);
+	if (fread(fib->rgW97, 28, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
 		return DOC_ERR_FILE;
 	}
 
 	//read Fib.cslw
-	if (fread(&(fib.cslw), 2, 1, fp) != 1){
-		free(fib.base);
-		free(fib.rgW97);
+	if (fread(&(fib->cslw), 2, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
 		return DOC_ERR_FILE;
 	}
 
 	//check csw
-	printf("cslw: %x\n", fib.cslw);
-	if (fib.cslw != 22) {
-		free(fib.base);
-		free(fib.rgW97);
+	printf("cslw: %x\n", fib->cslw);
+	if (fib->cslw != 22) {
+		free(fib->base);
+		free(fib->rgW97);
 		return DOC_ERR_HEADER;
 	}	
 
 	//allocate FibRgLw97
-	fib.rgLw97 = malloc(88);
-	if (!fib.rgLw97){
-		free(fib.base);
-		free(fib.rgW97);
+	fib->rgLw97 = malloc(88);
+	if (!fib->rgLw97){
+		free(fib->base);
+		free(fib->rgW97);
 		return DOC_ERR_ALLOC;
 	}
 	
 	//read FibRgLw97
-	if (fread(fib.rgLw97, 88, 1, fp) != 1){
-		free(fib.base);
-		free(fib.rgW97);
-		free(fib.rgLw97);
+	if (fread(fib->rgLw97, 88, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
 		return DOC_ERR_FILE;
 	}	
 	
 	//read Fib.cbRgFcLcb
-	if (fread(&(fib.cbRgFcLcb), 2, 1, fp) != 1){
-		free(fib.base);
-		free(fib.rgW97);
-		free(fib.rgLw97);
+	if (fread(&(fib->cbRgFcLcb), 2, 1, fp) != 1){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
 		return DOC_ERR_FILE;
 	}
 	
-	printf("cbRgFcLcb: %x\n", fib.cbRgFcLcb);
+	/*printf("cbRgFcLcb: %x\n", fib.cbRgFcLcb);*/
 
 	//allocate rgFcLcb
-	fib.rgFcLcb = malloc(fib.cbRgFcLcb*8);
-	if (!fib.rgFcLcb){
-		free(fib.base);
-		free(fib.rgW97);
-		free(fib.rgLw97);
+	fib->rgFcLcb = malloc(fib->cbRgFcLcb*8);
+	if (!fib->rgFcLcb){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
 		return DOC_ERR_ALLOC;
 	}	
 
 	
 	//read rgFcLcb
-	if (fread(fib.rgFcLcb, 8, fib.cbRgFcLcb, fp) != fib.cbRgFcLcb){
-		free(fib.base);
-		free(fib.rgW97);
-		free(fib.rgLw97);
-		free(fib.rgFcLcb);
+	if (fread(fib->rgFcLcb, 8, fib->cbRgFcLcb, fp) != fib->cbRgFcLcb){
+		free(fib->base);
+		free(fib->rgW97);
+		free(fib->rgLw97);
+		free(fib->rgFcLcb);
 		return DOC_ERR_FILE;
 	}	
 
 	//read Fib.cswNew
-	fread(&(fib.cswNew), 2, 1, fp);
-	printf("cswNew: %x\n", fib.cswNew);
+	fread(&(fib->cswNew), 2, 1, fp);
+	/*printf("cswNew: %x\n", fib.cswNew);*/
 
-	if (fib.cswNew > 0){
+	if (fib->cswNew > 0){
 		//allocate FibRgCswNew
-		fib.rgCswNew = malloc(fib.cswNew * 2);
-		if (!fib.rgFcLcb){
-			free(fib.base);
-			free(fib.rgW97);
-			free(fib.rgLw97);
-			free(fib.rgFcLcb);
+		fib->rgCswNew = malloc(fib->cswNew * 2);
+		if (!fib->rgFcLcb){
+			free(fib->base);
+			free(fib->rgW97);
+			free(fib->rgLw97);
+			free(fib->rgFcLcb);
 			return DOC_ERR_ALLOC;
 		}	
 
 		//read FibRgCswNew
-		if (fread(fib.rgCswNew, 2, fib.cswNew, fp) != fib.cswNew){
-			free(fib.base);
-			free(fib.rgW97);
-			free(fib.rgLw97);
-			free(fib.rgFcLcb);
+		if (fread(fib->rgCswNew, 2, fib->cswNew, fp) != fib->cswNew){
+			free(fib->base);
+			free(fib->rgW97);
+			free(fib->rgLw97);
+			free(fib->rgFcLcb);
 			return DOC_ERR_FILE;
 		}	
 	}
 	return 0;
 };
 
-FILE *table_stream(Fib *fib, struct cfb *cfb){
-	//printf("FibBase G: %x\n", FibBaseG(fib->base));
-	if (FibBaseG(fib->base))
+FILE *_table_stream(cfb_doc_t *doc, struct cfb *cfb){
+	Fib *fib = &doc[0].fib;
+	if (FibBaseG(fib[0].base))
 		return cfb_get_stream(cfb, "1Table");
 	return cfb_get_stream(cfb, "0Table");
 }
 
-int plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
+int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	int i;
 
 	//get lastCP
@@ -2680,7 +2677,7 @@ int plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	return 0;
 }
 
-int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
+int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	clx->RgPrc = malloc(sizeof(struct Prc));
 	if (!clx->RgPrc)
 		return DOC_ERR_ALLOC;		
@@ -2727,7 +2724,7 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 			return DOC_ERR_FILE;
 		
 		//read Pcdt->PlcPcd		
-		plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx - cbGrpprl, doc);
+		_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx - cbGrpprl, doc);
 	} 
 	else 
 		if (ch == 0x02){ //we have Pcdt only
@@ -2737,7 +2734,7 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 			
 			if (clx->Pcdt->lcb == lcbClx-5)
 				//read Plc piecies
-				plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx-5, doc);
+				_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx-5, doc);
 			else 
 				goto cycle;
 		} 
@@ -2750,7 +2747,7 @@ int clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	cycle:;
 	free(clx->RgPrc);
 	free(clx->Pcdt);
-	clx_init(clx, ++fcClx, --lcbClx, doc);		  
+	_clx_init(clx, ++fcClx, --lcbClx, doc);		  
 	
 	return 0;
 } 
@@ -2766,10 +2763,10 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	doc->WordDocument = fp;
 
 	//init FIB
-	cfb_doc_fib_init(doc, cfb);
-	
+	_cfb_doc_fib_init(&(doc->fib), doc->WordDocument, cfb);
+
 	//get table
-	doc->Table = table_stream(&doc->fib, cfb);
+	doc->Table = _table_stream(doc, cfb);
 	if (!doc->Table){
 		//printf("Can't get Table stream\n"); 
 		return DOC_ERR_FILE;
@@ -2786,29 +2783,50 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	printf("lcbClx: %d\n", lcbClx);
 
 	//Read the Clx from the Table Stream
-	ret = clx_init(&(doc->clx), rgFcLcb97->fcClx, rgFcLcb97->lcbClx, doc);
+	ret = _clx_init(&(doc->clx), rgFcLcb97->fcClx, rgFcLcb97->lcbClx, doc);
 	if (ret)
 		return ret;	
 
 	return 0;
 }
 
-void get_text(int size, Fib *fib, struct PlcPcd *PlcPcd){
-	int i;
+void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
+
+/*
+ * Find the last cp.
+ */ 
+	uint32_t lastCp = doc->fib.rgLw97->ccpFtn 
+						+  doc->fib.rgLw97->ccpHdd
+						+  doc->fib.rgLw97->ccpAtn
+						+  doc->fib.rgLw97->ccpEdn
+						+  doc->fib.rgLw97->ccpTxbx
+						+  doc->fib.rgLw97->ccpHdrTxbx;
+	lastCp += (lastCp != 0) + doc->fib.rgLw97->ccpText;
 
 	//get text
 	printf("TEXT: \n");
-	for (i = 0; i < size/8; ++i) {
+
+/*
+ * for each cp
+ */
+uint32_t cp;
+for (cp = 0; cp <= lastCp; ++cp) {
+	
 /*
  * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
  * WordDocument Stream of the text at character position PlcPcd.aCp[i].
  */
-		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
+		struct FcCompressed fc = PlcPcd->aPcd[cp].fc;	
 		
 		DWORD off = FcValue(fc); //offset
-		DWORD lcb = PlcPcd->aCp[i+1] - PlcPcd->aCp[i];
+		uint16_t lcb = PlcPcd->aCp[cp+1] - PlcPcd->aCp[cp]; //length of text piece
+		/*cp += lcb; //move cp to next*/
+
+		if (lcb != 0){
+		printf("\nOFF: %d, lcb: %ld\n", off, lcb);
+		/*continue;*/
 		
-		if (FcCompressed(fc)){
+			if (FcCompressed(fc)){
 /*
  * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
  * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
@@ -2816,33 +2834,43 @@ void get_text(int size, Fib *fib, struct PlcPcd *PlcPcd){
  * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
  * in the WordDocument Stream and each character occupies one byte.
  */
-			off /= 2;
-			fseek(fib->WordDocument, off, SEEK_SET);	
-			char str[lcb + 1];
-			fread(str, lcb, 1, fib->WordDocument);
-			str[lcb] = 0;
-			printf("%s", str);
-		} else {
+/*
+ * If ANSI then we start /2
+ */
+				off /= 2;
+				fseek(doc->WordDocument, off, SEEK_SET);	
+				char str[lcb + 1];
+				fread(str, lcb, 1, doc->WordDocument);
+				str[lcb] = 0;
+				printf("%s", str);
+			} else {
 /*
  * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
  * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
  * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
  * WordDocument Stream and each character occupies two bytes.
  */
-			WORD u[lcb];
-			fseek(fib->WordDocument, off, SEEK_SET);	
-			fread(u, lcb, 2, fib->WordDocument);
-			char str[2*lcb];
-			if (_utf16_to_utf8(u, lcb, str))
+/*
+ * If UNICODE 16, then text length * 2
+ */
+				lcb *= 2;
+				WORD *u = malloc(lcb);
+				fseek(doc->WordDocument, off, SEEK_SET);	
+				fread(u, lcb, 2, doc->WordDocument);
+				char *str = malloc(lcb);
+				/*char str[lcb + 1];*/
+				if (_utf16_to_utf8(u, lcb, str))
+					/*[>printf("%s", str);<]*/
+				for (int k = 0; k < lcb; ++k) {
+					printf("%c", str[k]);
+				}
 				//printf("%s", str);
-			for (int k = 0; k < 2*lcb; ++k) {
-				printf("%c", str[k]);
+
+				/*free(u);*/
 			}
-			//printf("%s", str);
-			
 		}
 	}
-	printf("\n");
+	/*printf("\n");*/
 }
 
 
@@ -2936,24 +2964,13 @@ int cfb_doc_get_text(
 	int ret = 0;
 
 	//Read the FIB from offset zero in the WordDocument Stream
-	Fib fib;
-	ret = fib_init(&fib, cfb);
+	cfb_doc_t doc;
+	ret = cfb_doc_init(&doc, cfb);
 	if (ret)
 		return ret;
 
-	//All versions of the FIB contain exactly one FibRgFcLcb97 
-	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(fib.rgFcLcb);
-	//FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx
-	uint32_t fcClx = rgFcLcb97->fcClx;
-	printf("fcClx: %d\n", fcClx);
-	//FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx
-	uint32_t lcbClx = rgFcLcb97->lcbClx;
-	printf("lcbClx: %d\n", lcbClx);
-
-	//Read the Clx from the Table Stream
-	ret = clx_init(&(fib.clx), rgFcLcb97->fcClx, rgFcLcb97->lcbClx, &fib);
-	if (ret)
-		return ret;
+	//get text
+	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd));
 
 	return 0;
 }
