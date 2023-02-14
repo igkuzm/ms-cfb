@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 21.11.2022
+ * Last Modified Date: 15.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -381,17 +381,24 @@ size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
 	int i, k = 0;
 	for (i = 0; i < len; ++i) {
 		WORD wc = utf16[i];
-		if (wc > 0x80){ //2-byte
-			//get first byte - first 5 bit 00000111 11000000
-			//and mask with 11000000 
-			utf8[k++] = ((wc & 0x7C0)>> 6) | 0xC0;
-
-			//get last - 00000000 00111111 
-			//and mask with 10000000 
-			utf8[k++] = ( wc & 0x3F)       | 0x80;
+		if (wc <= 0x7F) {
+			// Plain single-byte ASCII.
+			utf8[k++] = (char) wc;
 		}
-		else //ANSY
-			utf8[k++] = wc;
+		else if (wc <= 0x7FF) {
+			// Two bytes.
+			utf8[k++] = 0xC0 |  (wc >> 6);
+			utf8[k++] = 0x80 | ((wc >> 0) & 0x3F);
+		}
+		else if (wc <= 0xFFFF) {
+			// Three bytes.
+			utf8[k++] = 0xE0 |  (wc >> 12);
+			utf8[k++] = 0x80 | ((wc >> 6) & 0x3F);
+			utf8[k++] = 0x80 | ((wc >> 0) & 0x3F);
+		}
+		else{
+			// Invalid char; don't encode anything.
+		}
 	}
 	//null-terminate
 	utf8[k] = 0;	

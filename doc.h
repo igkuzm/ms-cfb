@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 14.02.2023
+ * Last Modified Date: 15.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -2447,6 +2447,7 @@ typedef struct cfb_doc
 	Fib  fib;             //File information block
 	struct Clx clx;       //clx data
 	uint32_t lastCp;	  //last Cp (character positions)
+	int naCp;             //number of CP in aCP
 	int nPcd;             //number of Pcd (piecies of text)
 } cfb_doc_t;
 
@@ -2669,19 +2670,20 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 			break;
 		PlcPcd->aCp = ptr;
 	}
+	doc->naCp = i;
 
-	//read PCD
-	uint32_t size = len - i*4;
-	PlcPcd->aPcd = malloc(size);
+	//read PCD - has 64bit
+	PlcPcd->aPcdl = len - i*4;
+	PlcPcd->aPcd = malloc(PlcPcd->aPcdl);
 	if (!PlcPcd->aPcd){
 		free(PlcPcd->aCp);	
 		free(PlcPcd);	
 		return -1;
 	}
-	fread(PlcPcd->aPcd, size, 1, doc->Table);
+	fread(PlcPcd->aPcd, PlcPcd->aPcdl, 1, doc->Table);
 
 	//number of Pcd
-	doc->nPcd = size / 4;
+	doc->nPcd = PlcPcd->aPcdl / 8;
 	
 	//for (i = 0; i < doc->nPcd; ++i) {
 		//printf("PlcPcd->aPcd[%d]: ABCfR2: %x, FC: %x, PRM: %x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
@@ -2762,46 +2764,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	//get PlcPcd
 	_plcpcd_init(&(clx->Pcdt->PlcPcd), clx->Pcdt->lcb, doc);
 	
-	////get PlcPcd
-	//uint32_t *PlcPcd = malloc(clx->Pcdt->lcb);
-	//fread(PlcPcd, clx->Pcdt->lcb, 1, doc->Table);	
-
-	////get cCp
-	////allocate aCP
-	//clx->Pcdt->PlcPcd.aCp = malloc(4);
-	//if (!clx->Pcdt->PlcPcd.aCp){
-		//free(PlcPcd);	
-		//return DOC_ERR_ALLOC;
-	//}
-	//int i;
-	//for (i = 0; i < clx->Pcdt->lcb/4; i++) {
-		//clx->Pcdt->PlcPcd.aCp[i] = PlcPcd[i];
-		//if (PlcPcd[i] == doc->lastCp)
-			//break;
-		////realloc aCp
-		//void *ptr = realloc(clx->Pcdt->PlcPcd.aCp, (i+1)*4);
-		//if(!ptr)
-			//break;
-		//clx->Pcdt->PlcPcd.aCp = ptr;		
-	//}
-
-	//i++;
-	////len of aCp
-	//clx->Pcdt->PlcPcd.aCPl = i*4;
-
-	////get cPcd
-	////allocate aPcd	
-	//clx->Pcdt->PlcPcd.aPcdl = clx->Pcdt->lcb - i*4; //len of aPcd 
-	//clx->Pcdt->PlcPcd.aPcd = malloc(clx->Pcdt->PlcPcd.aPcdl);
-	//if (!clx->Pcdt->PlcPcd.aCp){
-		//free(PlcPcd);	
-		//return DOC_ERR_ALLOC;
-	//}	
-	////fill aPcd array
-	//memcpy(clx->Pcdt->PlcPcd.aPcd, &PlcPcd[i], clx->Pcdt->PlcPcd.aPcdl);
-	//doc->nPcd = clx->Pcdt->PlcPcd.aPcdl/4;
-
-	//free(PlcPcd);	
+	printf("DOC aCP: %d, PCD: %d\n", doc->naCp, doc->nPcd);
 	return 0;
 }
 
@@ -2919,12 +2882,12 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 
 	return 0;
 }
-void _get_text_new(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
+void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
 	// get char for each CP
 	// CPs are in range in aCp
-	int i = 0; //aCp iterator
+	int i; //aCp iterator
 	uint32_t cp = 0; //CP (char position)
-	while (PlcPcd->aCp[i] <= doc->lastCp){
+	for (i=0; i < doc->nPcd; i++){
 
 /*
  * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
@@ -2978,74 +2941,8 @@ void _get_text_new(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
 				printf("%s", utf8);
 			}
 		}
-		//iterate
-		i++;
 	}
 }
-
-void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
-
-//for each PCD 
-int i;
-for (i = 0; i < doc->nPcd; ++i) {
-	
-/*
- * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
- * WordDocument Stream of the text at character position PlcPcd.aCp[i].
- */
-		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
-		printf("FC: %x, compressed: %s, offset: %d\n", fc.fc, FcCompressed(fc)?"true":"false", FcValue(fc));
-		
-		DWORD off = FcValue(fc); //offset
-		DWORD lcb = PlcPcd->aCp[i+1] - PlcPcd->aCp[i]; //length of text piece
-
-		printf("off: %d, len: %d\n", off, lcb);
-		continue;
-
-													   
-		if (FcCompressed(fc)){
-/*
- * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
- * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
- * one of the special values in the table defined in the description of FcCompressed.fc. This is 
- * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
- * in the WordDocument Stream and each character occupies one byte.
- */
-/*
- * If ANSI then we start /2
- */
-			off /= 2;
-			fseek(doc->WordDocument, off, SEEK_SET);	
-			char str[lcb + 1];
-			fread(str, lcb, 1, doc->WordDocument);
-			str[lcb] = 0;
-			printf("%s", str);
-		} else {
-/*
- * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
- * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
- * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
- * WordDocument Stream and each character occupies two bytes.
- */
-/*
- * If UNICODE 16, then text length * 2
- */
-			lcb *= 2;
-			WORD *u = malloc(lcb);
-			fseek(doc->WordDocument, off, SEEK_SET);	
-			fread(u, lcb, 2, doc->WordDocument);
-			char *str = malloc(lcb);
-			if (_utf16_to_utf8(u, lcb, str)){
-				for (int k = 0; k < lcb; ++k) {
-					printf("%c", str[k]);
-				}
-			}
-			//printf("%s", str);
-		}
-	}
-	/*printf("\n");*/
-}
-
 
 /*
  * Retrieving Text
@@ -3143,7 +3040,7 @@ int cfb_doc_get_text(
 		return ret;
 
 	//get text
-	_get_text_new(&doc, &(doc.clx.Pcdt->PlcPcd));
+	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd));
 
 	return 0;
 }
