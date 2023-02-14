@@ -2446,6 +2446,7 @@ typedef struct cfb_doc
 	
 	Fib  fib;             //File information block
 	struct Clx clx;       //clx data
+	int nPcd;             //number of Pcd (piecies of text)
 } cfb_doc_t;
 
 
@@ -2674,6 +2675,10 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	}
 	fread(PlcPcd->aPcd, size, 1, doc->Table);
 
+	//number of Pcd
+	doc->nPcd = len / (sizeof(struct Pcd));
+	
+
 	return 0;
 }
 
@@ -2754,6 +2759,8 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	int ret = 0;
+	
+	doc->nPcd = 0;
 
 	//get WordDocument
 	FILE *fp = cfb_get_stream(cfb, "WordDocument");
@@ -2777,10 +2784,10 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc->fib.rgFcLcb);
 	//FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx
 	uint32_t fcClx = rgFcLcb97->fcClx;
-	printf("fcClx: %d\n", fcClx);
+	/*printf("fcClx: %d\n", fcClx);*/
 	//FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx
 	uint32_t lcbClx = rgFcLcb97->lcbClx;
-	printf("lcbClx: %d\n", lcbClx);
+	/*printf("lcbClx: %d\n", lcbClx);*/
 
 	//Read the Clx from the Table Stream
 	ret = _clx_init(&(doc->clx), rgFcLcb97->fcClx, rgFcLcb97->lcbClx, doc);
@@ -2792,41 +2799,25 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 
 void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
 
-/*
- * Find the last cp.
- */ 
-	uint32_t lastCp = doc->fib.rgLw97->ccpFtn 
-						+  doc->fib.rgLw97->ccpHdd
-						+  doc->fib.rgLw97->ccpAtn
-						+  doc->fib.rgLw97->ccpEdn
-						+  doc->fib.rgLw97->ccpTxbx
-						+  doc->fib.rgLw97->ccpHdrTxbx;
-	lastCp += (lastCp != 0) + doc->fib.rgLw97->ccpText;
-
-	//get text
-	printf("TEXT: \n");
-
-/*
- * for each cp
- */
-uint32_t cp;
-for (cp = 0; cp <= lastCp; ++cp) {
+//for each PCD 
+int i;
+for (i = 0; i < doc->nPcd; ++i) {
 	
 /*
  * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
  * WordDocument Stream of the text at character position PlcPcd.aCp[i].
  */
-		struct FcCompressed fc = PlcPcd->aPcd[cp].fc;	
+		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
+		printf("FC: %x, compressed: %s, offset: %d\n", fc.fc, FcCompressed(fc)?"true":"false", FcValue(fc));
 		
 		DWORD off = FcValue(fc); //offset
-		uint16_t lcb = PlcPcd->aCp[cp+1] - PlcPcd->aCp[cp]; //length of text piece
-		/*cp += lcb; //move cp to next*/
+		DWORD lcb = PlcPcd->aCp[i+1] - PlcPcd->aCp[i]; //length of text piece
 
-		if (lcb != 0){
-		printf("\nOFF: %d, lcb: %ld\n", off, lcb);
-		/*continue;*/
-		
-			if (FcCompressed(fc)){
+		printf("off: %d, len: %d\n", off, lcb);
+		continue;
+
+													   
+		if (FcCompressed(fc)){
 /*
  * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
  * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
@@ -2837,13 +2828,13 @@ for (cp = 0; cp <= lastCp; ++cp) {
 /*
  * If ANSI then we start /2
  */
-				off /= 2;
-				fseek(doc->WordDocument, off, SEEK_SET);	
-				char str[lcb + 1];
-				fread(str, lcb, 1, doc->WordDocument);
-				str[lcb] = 0;
-				printf("%s", str);
-			} else {
+			off /= 2;
+			fseek(doc->WordDocument, off, SEEK_SET);	
+			char str[lcb + 1];
+			fread(str, lcb, 1, doc->WordDocument);
+			str[lcb] = 0;
+			printf("%s", str);
+		} else {
 /*
  * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
  * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
@@ -2853,21 +2844,17 @@ for (cp = 0; cp <= lastCp; ++cp) {
 /*
  * If UNICODE 16, then text length * 2
  */
-				lcb *= 2;
-				WORD *u = malloc(lcb);
-				fseek(doc->WordDocument, off, SEEK_SET);	
-				fread(u, lcb, 2, doc->WordDocument);
-				char *str = malloc(lcb);
-				/*char str[lcb + 1];*/
-				if (_utf16_to_utf8(u, lcb, str))
-					/*[>printf("%s", str);<]*/
+			lcb *= 2;
+			WORD *u = malloc(lcb);
+			fseek(doc->WordDocument, off, SEEK_SET);	
+			fread(u, lcb, 2, doc->WordDocument);
+			char *str = malloc(lcb);
+			if (_utf16_to_utf8(u, lcb, str)){
 				for (int k = 0; k < lcb; ++k) {
 					printf("%c", str[k]);
 				}
-				//printf("%s", str);
-
-				/*free(u);*/
 			}
+			//printf("%s", str);
 		}
 	}
 	/*printf("\n");*/
