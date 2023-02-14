@@ -2636,12 +2636,16 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	doc->lastCp = 
 			doc->fib.rgLw97->ccpFtn +
 			doc->fib.rgLw97->ccpHdd +
+			doc->fib.rgLw97->reserved3 + //Mcr
 			doc->fib.rgLw97->ccpAtn +
 			doc->fib.rgLw97->ccpEdn +
 			doc->fib.rgLw97->ccpTxbx +
 			doc->fib.rgLw97->ccpHdrTxbx;
 	
-	doc->lastCp += (doc->lastCp != 0) + doc->fib.rgLw97->ccpText;
+	if (doc->lastCp)
+		doc->lastCp += 1 + doc->fib.rgLw97->ccpText;
+	else
+		doc->lastCp = doc->fib.rgLw97->ccpText;
 
 	//allocate aCP
 	PlcPcd->aCp = malloc(4);
@@ -2677,86 +2681,204 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	fread(PlcPcd->aPcd, size, 1, doc->Table);
 
 	//number of Pcd
-	doc->nPcd = len / (sizeof(struct Pcd));
+	doc->nPcd = size / 4;
 	
+	//for (i = 0; i < doc->nPcd; ++i) {
+		//printf("PlcPcd->aPcd[%d]: ABCfR2: %x, FC: %x, PRM: %x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
+	//}
 
 	return 0;
 }
 
 int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
-	clx->RgPrc = malloc(sizeof(struct Prc));
-	if (!clx->RgPrc)
-		return DOC_ERR_ALLOC;		
+
+	//get lastCP
+	doc->lastCp = 
+			doc->fib.rgLw97->ccpFtn +
+			doc->fib.rgLw97->ccpHdd +
+			doc->fib.rgLw97->reserved3 + //Mcr
+			doc->fib.rgLw97->ccpAtn +
+			doc->fib.rgLw97->ccpEdn +
+			doc->fib.rgLw97->ccpTxbx +
+			doc->fib.rgLw97->ccpHdrTxbx;
 	
+	if (doc->lastCp)
+		doc->lastCp += 1 + doc->fib.rgLw97->ccpText;
+	else
+		doc->lastCp = doc->fib.rgLw97->ccpText;
+	
+	//get clx
+	uint8_t ch;
+	fseek(doc->Table, fcClx, SEEK_SET);
+	fread(&ch, 1, 1, doc->Table);
+	printf("First bite of CLX: %x\n", ch);
+	
+	if (ch == 0x01){ //we have RgPrc (Prc array)
+		//allocate RgPrc
+		clx->RgPrc = malloc(sizeof(struct Prc));
+		if (!clx->RgPrc)
+			return DOC_ERR_ALLOC;
+		
+		int16_t cbGrpprl; //the first 2 bite of PrcData - signed integer
+		fread(&cbGrpprl, 2, 1, doc->Table);
+		if (cbGrpprl > 0x3FA2) //error
+			return DOC_ERR_FILE;		
+		
+		//allocate RgPrc->data 
+		clx->RgPrc->data = malloc(sizeof(struct PrcData));
+		if (!clx->RgPrc->data)
+			return DOC_ERR_ALLOC;
+
+		clx->RgPrc->data->cbGrpprl = cbGrpprl;
+
+		//allocate GrpPrl
+		clx->RgPrc->data->GrpPrl = malloc(cbGrpprl);
+		if (!clx->RgPrc->data->GrpPrl)
+			return DOC_ERR_ALLOC;
+		
+		//read GrpPrl
+		fread(clx->RgPrc->data->GrpPrl, cbGrpprl, 1, doc->Table);
+
+		//read ch again
+		fread(&ch, 1, 1, doc->Table);
+	}	
+
+	//get PlcPcd
 	clx->Pcdt = malloc(sizeof(struct Pcdt));
 	if (!clx->Pcdt)
-		return DOC_ERR_ALLOC;		
+		return DOC_ERR_ALLOC;	
 
-	struct PlcPcd PlcPcd;
+	//read Pcdt->clxt - this must be 0x02
+	clx->Pcdt->clxt = ch;
+	printf("Pcdt->clxt: %x\n", clx->Pcdt->clxt);
+	if (clx->Pcdt->clxt != 0x02) { //some error
+		return DOC_ERR_FILE;		
+	}
+
+	//read lcb;
+	fread(&(clx->Pcdt->lcb), 4, 1, doc->Table);	
+	printf("Pcdt->lcb: %d\n", clx->Pcdt->lcb);
+
+	//get PlcPcd
+	_plcpcd_init(&(clx->Pcdt->PlcPcd), clx->Pcdt->lcb, doc);
 	
-	//get first byte
-	fseek(doc->Table, fcClx, SEEK_SET);
-	uint8_t ch;
-	fread(&ch, 1, 1, doc->Table);
-	if (ch == 0x01){ //we have Prc array
-		//read cbGrpprl.
-		uint16_t cbGrpprl;
-		if (fread(&cbGrpprl, 2, 1, doc->Table) != 1)
-			return DOC_ERR_FILE;
+	////get PlcPcd
+	//uint32_t *PlcPcd = malloc(clx->Pcdt->lcb);
+	//fread(PlcPcd, clx->Pcdt->lcb, 1, doc->Table);	
+
+	////get cCp
+	////allocate aCP
+	//clx->Pcdt->PlcPcd.aCp = malloc(4);
+	//if (!clx->Pcdt->PlcPcd.aCp){
+		//free(PlcPcd);	
+		//return DOC_ERR_ALLOC;
+	//}
+	//int i;
+	//for (i = 0; i < clx->Pcdt->lcb/4; i++) {
+		//clx->Pcdt->PlcPcd.aCp[i] = PlcPcd[i];
+		//if (PlcPcd[i] == doc->lastCp)
+			//break;
+		////realloc aCp
+		//void *ptr = realloc(clx->Pcdt->PlcPcd.aCp, (i+1)*4);
+		//if(!ptr)
+			//break;
+		//clx->Pcdt->PlcPcd.aCp = ptr;		
+	//}
+
+	//i++;
+	////len of aCp
+	//clx->Pcdt->PlcPcd.aCPl = i*4;
+
+	////get cPcd
+	////allocate aPcd	
+	//clx->Pcdt->PlcPcd.aPcdl = clx->Pcdt->lcb - i*4; //len of aPcd 
+	//clx->Pcdt->PlcPcd.aPcd = malloc(clx->Pcdt->PlcPcd.aPcdl);
+	//if (!clx->Pcdt->PlcPcd.aCp){
+		//free(PlcPcd);	
+		//return DOC_ERR_ALLOC;
+	//}	
+	////fill aPcd array
+	//memcpy(clx->Pcdt->PlcPcd.aPcd, &PlcPcd[i], clx->Pcdt->PlcPcd.aPcdl);
+	//doc->nPcd = clx->Pcdt->PlcPcd.aPcdl/4;
+
+	//free(PlcPcd);	
+	return 0;
+}
+
+//int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
+	//clx->RgPrc = malloc(sizeof(struct Prc));
+	//if (!clx->RgPrc)
+		//return DOC_ERR_ALLOC;		
+	
+	//clx->Pcdt = malloc(sizeof(struct Pcdt));
+	//if (!clx->Pcdt)
+		//return DOC_ERR_ALLOC;		
+
+	//struct PlcPcd PlcPcd;
+	
+	////get first byte
+	//fseek(doc->Table, fcClx, SEEK_SET);
+	//uint8_t ch;
+	//fread(&ch, 1, 1, doc->Table);
+	//if (ch == 0x01){ //we have Prc array
+		////read cbGrpprl.
+		//uint16_t cbGrpprl;
+		//if (fread(&cbGrpprl, 2, 1, doc->Table) != 1)
+			//return DOC_ERR_FILE;
 /*
  * cbGrpprl specifies the size of GrpPrl, in bytes. 
  * This value MUST be less than or equal to 0x3FA2
 */
-		if (cbGrpprl > 0x3FA2) //error
-			return DOC_ERR_FILE;
-		struct Prl *GrpPrl = malloc(cbGrpprl);
-		if (!GrpPrl)
-			return DOC_ERR_ALLOC;		
-		//read GrpPrl 
-		if (fread(GrpPrl, cbGrpprl, 1, doc->Table) != 1)
-			return DOC_ERR_FILE;
+		//if (cbGrpprl > 0x3FA2) //error
+			//return DOC_ERR_FILE;
+		//struct Prl *GrpPrl = malloc(cbGrpprl);
+		//if (!GrpPrl)
+			//return DOC_ERR_ALLOC;		
+		////read GrpPrl 
+		//if (fread(GrpPrl, cbGrpprl, 1, doc->Table) != 1)
+			//return DOC_ERR_FILE;
 		
-		clx->RgPrc->clxt = ch;
-		clx->RgPrc->data = malloc(sizeof(struct PrcData));
-		if (!clx->RgPrc->data)
-			return DOC_ERR_ALLOC;		
-		clx->RgPrc->data->cbGrpprl = cbGrpprl;
-		clx->RgPrc->data->GrpPrl = GrpPrl;
+		//clx->RgPrc->clxt = ch;
+		//clx->RgPrc->data = malloc(sizeof(struct PrcData));
+		//if (!clx->RgPrc->data)
+			//return DOC_ERR_ALLOC;		
+		//clx->RgPrc->data->cbGrpprl = cbGrpprl;
+		//clx->RgPrc->data->GrpPrl = GrpPrl;
 		
-		//check clx->Pcdt->clxt
-		if (fread(&(clx->Pcdt->clxt), 1, 1, doc->Table) != 1)
-			return DOC_ERR_FILE;
-		if (clx->Pcdt->clxt != 0x02) //error
-			return DOC_ERR_FILE;
+		////check clx->Pcdt->clxt
+		//if (fread(&(clx->Pcdt->clxt), 1, 1, doc->Table) != 1)
+			//return DOC_ERR_FILE;
+		//if (clx->Pcdt->clxt != 0x02) //error
+			//return DOC_ERR_FILE;
 		
-		//read Pcdt->PlcPcd		
-		_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx - cbGrpprl, doc);
-	} 
-	else 
-		if (ch == 0x02){ //we have Pcdt only
-			clx->Pcdt->clxt = ch;
-			//read lcb;
-			fread(&(clx->Pcdt->lcb), 4, 1, doc->Table);
+		////read Pcdt->PlcPcd		
+		//_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx - cbGrpprl, doc);
+	//} 
+	//else 
+		//if (ch == 0x02){ //we have Pcdt only
+			//clx->Pcdt->clxt = ch;
+			////read lcb;
+			//fread(&(clx->Pcdt->lcb), 4, 1, doc->Table);
 			
-			if (clx->Pcdt->lcb == lcbClx-5)
-				//read Plc piecies
-				_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx-5, doc);
-			else 
-				goto cycle;
-		} 
-		else { //error?
-			goto cycle;
-	}
+			//if (clx->Pcdt->lcb == lcbClx-5)
+				////read Plc piecies
+				//_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx-5, doc);
+			//else 
+				//goto cycle;
+		//} 
+		//else { //error?
+			//goto cycle;
+	//}
 
-	return 0;
+	//return 0;
 
-	cycle:;
-	free(clx->RgPrc);
-	free(clx->Pcdt);
-	_clx_init(clx, ++fcClx, --lcbClx, doc);		  
+	//cycle:;
+	//free(clx->RgPrc);
+	//free(clx->Pcdt);
+	//_clx_init(clx, ++fcClx, --lcbClx, doc);		  
 	
-	return 0;
-} 
+	//return 0;
+//} 
 
 int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	int ret = 0;
@@ -2799,8 +2921,11 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 }
 void _get_text_new(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
 	// get char for each CP
-	uint32_t cp, i=0;
-	for (cp = 0; cp <= doc->lastCp; ++cp) {
+	// CPs are in range in aCp
+	int i = 0; //aCp iterator
+	uint32_t cp = 0; //CP (char position)
+	while (PlcPcd->aCp[i] <= doc->lastCp){
+
 /*
  * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
  * PlcPcd.aCp[i] ≤ cp. As with all Plcs, the elements of PlcPcd.aCp are sorted in ascending order.
@@ -2808,10 +2933,7 @@ void _get_text_new(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
  * Thus, if the last element of PlcPcd.aCp is less than or equal to cp, cp is outside the range of
  * valid character positions in this document
  */
-		// Find the largest i such that PlcPcd.aCp[i] ≤ cp
-		if (PlcPcd->aCp[i] > cp)
-			i++;
-
+		
 /*
  * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
  * WordDocument Stream of the text at character position PlcPcd.aCp[i].
@@ -2826,11 +2948,15 @@ void _get_text_new(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
  * in the WordDocument Stream and each character occupies one byte.
  */			
 			//ANSI
-			char c;
-			DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
+			DWORD off = (FcValue(fc) / 2) + PlcPcd->aCp[i];
 			fseek(doc->WordDocument, off, SEEK_SET);	
-			fread(&c, 2, 1, doc->WordDocument);			
-			printf("%c", c);
+			for (cp = PlcPcd->aCp[i]; cp < PlcPcd->aCp[i+1]; cp++){
+				//DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
+				//fseek(doc->WordDocument, off, SEEK_SET);	
+				char c;
+				fread(&c, 2, 1, doc->WordDocument);			
+				printf("%c", c);
+			}
 
 		} else {
 /*
@@ -2840,14 +2966,20 @@ void _get_text_new(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
  * WordDocument Stream and each character occupies two bytes.
  */			
 			//UNICODE 16
-			DWORD off = FcValue(fc) + 2*(cp - PlcPcd->aCp[i]);
-			WORD u;
+			DWORD off = FcValue(fc) + 2*PlcPcd->aCp[i];
 			fseek(doc->WordDocument, off, SEEK_SET);	
-			fread(&u, 2, 1, doc->WordDocument);
-			char utf8[2];
-			_utf16_to_utf8(&u, 1, utf8);
-			printf("%s", utf8);
+			for (cp = PlcPcd->aCp[i]; cp < PlcPcd->aCp[i+1]; cp++){
+				//DWORD off = FcValue(fc) + 2*(cp - PlcPcd->aCp[i]);
+				//fseek(doc->WordDocument, off, SEEK_SET);	
+				WORD u;
+				fread(&u, 2, 1, doc->WordDocument);
+				char utf8[2];
+				_utf16_to_utf8(&u, 1, utf8);
+				printf("%s", utf8);
+			}
 		}
+		//iterate
+		i++;
 	}
 }
 
