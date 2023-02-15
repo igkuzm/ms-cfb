@@ -2370,7 +2370,7 @@ struct PlcPcd {
 				   //ccpAtn, ccpEdn, ccpTxbx, or ccpHdrTxbx from FibRgLw97 are nonzero, then the 
 				   //last CP MUST be equal to the sum of those fields plus ccpText+1. Otherwise, 
 				   //the last CP MUST be equal to ccpText.
-	uint32_t aCPl; //len of aCP
+	uint32_t aCPl; //number of CP in array
 	struct Pcd *aPcd;//(variable):  An array of Pcds (8 bytes each) that specify the location of 
 				   //text in the WordDocument stream and any additional properties of the text. 
 				   //If aPcd[i].fc.fCompressed is 1, then the byte offset of the last character 
@@ -2383,7 +2383,7 @@ struct PlcPcd {
 				   //duplicate CPs, (aCP[i+1]-aCP[i])>0, for all valid indexes i of aPcd. 
 				   //Because a PLC MUST contain one more CP than a data element, i+1 is a valid 
 				   //index of aCP if i is a valid index of aPcd.
-	uint32_t aPcdl;//len of aPcd
+	uint32_t aPcdl;//number of Pcd in array
 };
 
 /*
@@ -2446,9 +2446,6 @@ typedef struct cfb_doc
 	
 	Fib  fib;             //File information block
 	struct Clx clx;       //clx data
-	uint32_t lastCp;	  //last Cp (character positions)
-	int naCp;             //number of CP in aCP
-	int nPcd;             //number of Pcd (piecies of text)
 } cfb_doc_t;
 
 
@@ -2634,7 +2631,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	int i;
 
 	//get lastCP
-	doc->lastCp = 
+	uint32_t lastCp = 
 			doc->fib.rgLw97->ccpFtn +
 			doc->fib.rgLw97->ccpHdd +
 			doc->fib.rgLw97->reserved3 + //Mcr
@@ -2643,10 +2640,10 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 			doc->fib.rgLw97->ccpTxbx +
 			doc->fib.rgLw97->ccpHdrTxbx;
 	
-	if (doc->lastCp)
-		doc->lastCp += 1 + doc->fib.rgLw97->ccpText;
+	if (lastCp)
+		lastCp += 1 + doc->fib.rgLw97->ccpText;
 	else
-		doc->lastCp = doc->fib.rgLw97->ccpText;
+		lastCp = doc->fib.rgLw97->ccpText;
 
 	//allocate aCP
 	PlcPcd->aCp = malloc(4);
@@ -2661,7 +2658,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	while(fread(&ch, 4, 1, doc->Table) == 1){
 		//printf("CP: %d\n", ch);
 		PlcPcd->aCp[i++] = ch;
-		if (ch == doc->lastCp)
+		if (ch == lastCp)
 			break;
 
 		//realloc aCp
@@ -2670,20 +2667,21 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 			break;
 		PlcPcd->aCp = ptr;
 	}
-	doc->naCp = i;
+	//number of cp in array
+	PlcPcd->aCPl = i;
 
 	//read PCD - has 64bit
-	PlcPcd->aPcdl = len - i*4;
-	PlcPcd->aPcd = malloc(PlcPcd->aPcdl);
+	uint32_t size = len - i*4;
+	PlcPcd->aPcd = malloc(size);
 	if (!PlcPcd->aPcd){
 		free(PlcPcd->aCp);	
 		free(PlcPcd);	
 		return -1;
 	}
-	fread(PlcPcd->aPcd, PlcPcd->aPcdl, 1, doc->Table);
+	fread(PlcPcd->aPcd, size, 1, doc->Table);
 
-	//number of Pcd
-	doc->nPcd = PlcPcd->aPcdl / 8;
+	//number of Pcd in array
+	PlcPcd->aPcdl = size / 8;
 	
 	//for (i = 0; i < doc->nPcd; ++i) {
 		//printf("PlcPcd->aPcd[%d]: ABCfR2: %x, FC: %x, PRM: %x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
@@ -2694,21 +2692,6 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 
 int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
-	//get lastCP
-	doc->lastCp = 
-			doc->fib.rgLw97->ccpFtn +
-			doc->fib.rgLw97->ccpHdd +
-			doc->fib.rgLw97->reserved3 + //Mcr
-			doc->fib.rgLw97->ccpAtn +
-			doc->fib.rgLw97->ccpEdn +
-			doc->fib.rgLw97->ccpTxbx +
-			doc->fib.rgLw97->ccpHdrTxbx;
-	
-	if (doc->lastCp)
-		doc->lastCp += 1 + doc->fib.rgLw97->ccpText;
-	else
-		doc->lastCp = doc->fib.rgLw97->ccpText;
-	
 	//get clx
 	uint8_t ch;
 	fseek(doc->Table, fcClx, SEEK_SET);
@@ -2764,7 +2747,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	//get PlcPcd
 	_plcpcd_init(&(clx->Pcdt->PlcPcd), clx->Pcdt->lcb, doc);
 	
-	printf("DOC aCP: %d, PCD: %d\n", doc->naCp, doc->nPcd);
+	printf("DOC aCP: %d, PCD: %d\n", clx->Pcdt->PlcPcd.aCPl, clx->Pcdt->PlcPcd.aPcdl);
 	return 0;
 }
 
@@ -2846,8 +2829,6 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	int ret = 0;
 	
-	doc->nPcd = 0;
-
 	//get WordDocument
 	FILE *fp = cfb_get_stream(cfb, "WordDocument");
 	if (!fp)	
@@ -2887,7 +2868,7 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
 	// CPs are in range in aCp
 	int i; //aCp iterator
 	uint32_t cp = 0; //CP (char position)
-	for (i=0; i < doc->nPcd; i++){
+	for (i=0; i < PlcPcd->aPcdl; i++){
 
 /*
  * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
