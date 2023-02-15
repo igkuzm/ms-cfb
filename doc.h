@@ -2446,6 +2446,7 @@ typedef struct cfb_doc
 	
 	Fib  fib;             //File information block
 	struct Clx clx;       //clx data
+	bool byteOrder;				//need to change byte order
 } cfb_doc_t;
 
 
@@ -2489,7 +2490,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	fib->rgCswNew = NULL;
 
 	//allocate fibbase
-	fib->base = malloc(32);
+	fib->base = (FibBase *)malloc(32);
 	if (!fib->base)
 		return DOC_ERR_ALLOC;
 
@@ -2497,6 +2498,15 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	if (fread(fib->base, 32, 1, fp) != 1){
 		free(fib->base);
 		return DOC_ERR_FILE;
+	}
+	if (cfb->biteOrder){
+		fib->base->wIdent        = CFB_WORD_SW(fib->base->wIdent);
+		fib->base->nFib          = CFB_WORD_SW(fib->base->nFib);
+		fib->base->lid           = CFB_WORD_SW(fib->base->lid);
+		fib->base->pnNext        = CFB_WORD_SW(fib->base->pnNext);
+		fib->base->ABCDEFGHIJKLM = CFB_WORD_SW(fib->base->ABCDEFGHIJKLM);
+		fib->base->nFibBack      = CFB_WORD_SW(fib->base->nFibBack);
+		fib->base->lKey          = CFB_DWORD_SW(fib->base->lKey);
 	}
 	
 	//check wIdent
@@ -2511,6 +2521,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->base);
 		return DOC_ERR_FILE;
 	}
+	if (cfb->biteOrder){
+		fib->csw = CFB_WORD_SW(fib->csw);
+	}
 
 	//check csw
 	/*printf("csw: %x\n", fib.csw);*/
@@ -2520,7 +2533,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}
 
 	//allocate FibRgW97
-	fib->rgW97 = malloc(28);
+	fib->rgW97 = (FibRgW97 *)malloc(28);
 	if (!fib->rgW97){
 		free(fib->base);
 		return DOC_ERR_ALLOC;
@@ -2532,6 +2545,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->rgW97);
 		return DOC_ERR_FILE;
 	}
+	if (cfb->biteOrder){
+		fib->rgW97->lidFE = CFB_WORD_SW(fib->rgW97->lidFE);
+	}
 
 	//read Fib.cslw
 	if (fread(&(fib->cslw), 2, 1, fp) != 1){
@@ -2539,8 +2555,11 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->rgW97);
 		return DOC_ERR_FILE;
 	}
+	if (cfb->biteOrder){
+		fib->cslw = CFB_WORD_SW(fib->cslw);
+	}
 
-	//check csw
+	//check cslw
 	printf("cslw: %x\n", fib->cslw);
 	if (fib->cslw != 22) {
 		free(fib->base);
@@ -2549,7 +2568,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}	
 
 	//allocate FibRgLw97
-	fib->rgLw97 = malloc(88);
+	fib->rgLw97 = (FibRgLw97 *)malloc(88);
 	if (!fib->rgLw97){
 		free(fib->base);
 		free(fib->rgW97);
@@ -2563,6 +2582,16 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->rgLw97);
 		return DOC_ERR_FILE;
 	}	
+	if (cfb->biteOrder){
+		fib->rgLw97->cbMac      = CFB_DWORD_SW(fib->rgLw97->cbMac);
+		fib->rgLw97->ccpText    = CFB_DWORD_SW(fib->rgLw97->ccpText);
+		fib->rgLw97->ccpFtn     = CFB_DWORD_SW(fib->rgLw97->ccpFtn);
+		fib->rgLw97->ccpHdd     = CFB_DWORD_SW(fib->rgLw97->ccpHdd);
+		fib->rgLw97->ccpAtn     = CFB_DWORD_SW(fib->rgLw97->ccpAtn);
+		fib->rgLw97->ccpEdn     = CFB_DWORD_SW(fib->rgLw97->ccpEdn);
+		fib->rgLw97->ccpTxbx    = CFB_DWORD_SW(fib->rgLw97->ccpTxbx);
+		fib->rgLw97->ccpHdrTxbx = CFB_DWORD_SW(fib->rgLw97->ccpHdrTxbx);
+	}
 	
 	//read Fib.cbRgFcLcb
 	if (fread(&(fib->cbRgFcLcb), 2, 1, fp) != 1){
@@ -2571,11 +2600,14 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->rgLw97);
 		return DOC_ERR_FILE;
 	}
+	if (cfb->biteOrder){
+		fib->cbRgFcLcb = CFB_WORD_SW(fib->cbRgFcLcb);
+	}
 	
 	/*printf("cbRgFcLcb: %x\n", fib.cbRgFcLcb);*/
 
 	//allocate rgFcLcb
-	fib->rgFcLcb = malloc(fib->cbRgFcLcb*8);
+	fib->rgFcLcb = (uint32_t *)malloc(fib->cbRgFcLcb*8);
 	if (!fib->rgFcLcb){
 		free(fib->base);
 		free(fib->rgW97);
@@ -2592,14 +2624,23 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->rgFcLcb);
 		return DOC_ERR_FILE;
 	}	
+	if (cfb->biteOrder){
+		int i;
+		for (i = 0; i < fib->cbRgFcLcb/4; ++i) {
+			fib->rgFcLcb[i] = CFB_DWORD_SW(fib->rgFcLcb[i]);	
+		}
+	}
 
 	//read Fib.cswNew
 	fread(&(fib->cswNew), 2, 1, fp);
 	/*printf("cswNew: %x\n", fib.cswNew);*/
+	if (cfb->biteOrder){
+		fib->cswNew = CFB_WORD_SW(fib->cswNew);
+	}
 
 	if (fib->cswNew > 0){
 		//allocate FibRgCswNew
-		fib->rgCswNew = malloc(fib->cswNew * 2);
+		fib->rgCswNew = (FibRgCswNew *)malloc(fib->cswNew * 2);
 		if (!fib->rgFcLcb){
 			free(fib->base);
 			free(fib->rgW97);
@@ -2616,6 +2657,13 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 			free(fib->rgFcLcb);
 			return DOC_ERR_FILE;
 		}	
+		if (cfb->biteOrder){
+			fib->rgCswNew->nFibNew = CFB_WORD_SW(fib->rgCswNew->nFibNew);
+			int i;
+			for (i = 0; i < 4; ++i) {
+				fib->rgCswNew->rgCswNewData[i] = CFB_WORD_SW(fib->rgCswNew->rgCswNewData[i]);
+			}
+		}
 	}
 	return 0;
 };
@@ -2656,6 +2704,9 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	i=0;
 	uint32_t ch;
 	while(fread(&ch, 4, 1, doc->Table) == 1){
+		if (doc->byteOrder){
+			ch = CFB_DWORD_SW(ch);
+		}
 		//printf("CP: %d\n", ch);
 		PlcPcd->aCp[i++] = ch;
 		if (ch == lastCp)
@@ -2679,9 +2730,16 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 		return -1;
 	}
 	fread(PlcPcd->aPcd, size, 1, doc->Table);
-
 	//number of Pcd in array
 	PlcPcd->aPcdl = size / 8;
+	if (doc->byteOrder){
+		for (i = 0; i < PlcPcd->aPcdl; ++i) {
+			PlcPcd->aPcd[i].ABCfR2 = CFB_WORD_SW(PlcPcd->aPcd[i].ABCfR2); 
+			PlcPcd->aPcd[i].prm = CFB_WORD_SW(PlcPcd->aPcd[i].prm); 
+			PlcPcd->aPcd[i].fc.fc = CFB_DWORD_SW(PlcPcd->aPcd[i].fc.fc); 
+		}
+	}
+
 	
 	//for (i = 0; i < doc->nPcd; ++i) {
 		//printf("PlcPcd->aPcd[%d]: ABCfR2: %x, FC: %x, PRM: %x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
@@ -2706,6 +2764,9 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 		
 		int16_t cbGrpprl; //the first 2 bite of PrcData - signed integer
 		fread(&cbGrpprl, 2, 1, doc->Table);
+		if (doc->byteOrder){
+			cbGrpprl = CFB_WORD_SW(cbGrpprl);
+		}
 		if (cbGrpprl > 0x3FA2) //error
 			return DOC_ERR_FILE;		
 		
@@ -2742,6 +2803,9 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 	//read lcb;
 	fread(&(clx->Pcdt->lcb), 4, 1, doc->Table);	
+	if (doc->byteOrder){
+		clx->Pcdt->lcb = CFB_DWORD_SW(clx->Pcdt->lcb);
+	}
 	printf("Pcdt->lcb: %d\n", clx->Pcdt->lcb);
 
 	//get PlcPcd
@@ -2828,6 +2892,8 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	int ret = 0;
+	//get byte order
+	doc->byteOrder = cfb->biteOrder;
 	
 	//get WordDocument
 	FILE *fp = cfb_get_stream(cfb, "WordDocument");

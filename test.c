@@ -2,7 +2,7 @@
  * File              : test.c
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 14.02.2023
+ * Last Modified Date: 15.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -16,89 +16,89 @@
 #include <stdint.h>
 #include <stdio.h>
 
-static char* unicode_decode_iconv(const char *s, size_t len, iconv_t ic) {
-	char* outbuf = 0;
+//static char* unicode_decode_iconv(const char *s, size_t len, iconv_t ic) {
+	//char* outbuf = 0;
 
-	if(s && len && ic)
-	{
-		size_t outlenleft = len;
-		int outlen = len;
-		size_t inlenleft = len;
-		const char* src_ptr = s;
-		char* out_ptr = 0;
+	//if(s && len && ic)
+	//{
+		//size_t outlenleft = len;
+		//int outlen = len;
+		//size_t inlenleft = len;
+		//const char* src_ptr = s;
+		//char* out_ptr = 0;
 
-		size_t st; 
-		outbuf = malloc(outlen + 1);
+		//size_t st; 
+		//outbuf = malloc(outlen + 1);
 
-		if(outbuf)
-		{
-			out_ptr = outbuf;
-			while(inlenleft)
-			{
-				st = iconv(ic, (char **)&src_ptr, &inlenleft, (char **)&out_ptr,(size_t *) &outlenleft);
-				if(st == (size_t)(-1))
-				{
-					if(errno == E2BIG)
-					{
-						size_t diff = out_ptr - outbuf;
-						outlen += inlenleft;
-						outlenleft += inlenleft;
-						outbuf = realloc(outbuf, outlen + 1);
-						if(!outbuf)
-						{
-							break;
-						}
-						out_ptr = outbuf + diff;
-					}
-					else
-					{
-						free(outbuf), outbuf = NULL;
-						break;
-					}
-				}
-			}
-		}
-		outlen -= outlenleft;
+		//if(outbuf)
+		//{
+			//out_ptr = outbuf;
+			//while(inlenleft)
+			//{
+				//st = iconv(ic, (char **)&src_ptr, &inlenleft, (char **)&out_ptr,(size_t *) &outlenleft);
+				//if(st == (size_t)(-1))
+				//{
+					//if(errno == E2BIG)
+					//{
+						//size_t diff = out_ptr - outbuf;
+						//outlen += inlenleft;
+						//outlenleft += inlenleft;
+						//outbuf = realloc(outbuf, outlen + 1);
+						//if(!outbuf)
+						//{
+							//break;
+						//}
+						//out_ptr = outbuf + diff;
+					//}
+					//else
+					//{
+						//free(outbuf), outbuf = NULL;
+						//break;
+					//}
+				//}
+			//}
+		//}
+		//outlen -= outlenleft;
 
-		if(outbuf)
-		{
-			outbuf[outlen] = 0;
-		}
-	}
-	return outbuf;
-}
+		//if(outbuf)
+		//{
+			//outbuf[outlen] = 0;
+		//}
+	//}
+	//return outbuf;
+//}
 
-int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value){
-	char * str = NULL;
+//int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value){
+	//char * str = NULL;
 	
-	if (dwType == 30){
-		char buf[BUFSIZ];
-		strncpy(buf, (char*)value + 4, BUFSIZ);
-		//str = cprecode(buf, CPRECODE_CP1251, CPRECODE_UTF8);
+	//if (dwType == 30){
+		//char buf[BUFSIZ];
+		//strncpy(buf, (char*)value + 4, BUFSIZ);
+		////str = cprecode(buf, CPRECODE_CP1251, CPRECODE_UTF8);
+		////str = buf;
+		//iconv_t ic = iconv_open("UTF-8", "CP1251");
+		//str = unicode_decode_iconv(buf, strlen(buf), ic);
+	//}
+	//else if (dwType == 2){
+		//char buf[BUFSIZ];
+		//sprintf(buf, "%d", *(uint16_t*)value);
 		//str = buf;
-		iconv_t ic = iconv_open("UTF-8", "CP1251");
-		str = unicode_decode_iconv(buf, strlen(buf), ic);
-	}
-	else if (dwType == 2){
-		char buf[BUFSIZ];
-		sprintf(buf, "%d", *(uint16_t*)value);
-		str = buf;
-	}
-	else if (dwType == 3){
-		char buf[BUFSIZ];
-		sprintf(buf, "%d", *(uint32_t*)value);
-		str = buf;
-	}
+	//}
+	//else if (dwType == 3){
+		//char buf[BUFSIZ];
+		//sprintf(buf, "%d", *(uint32_t*)value);
+		//str = buf;
+	//}
 
-	printf("PROP id: %d, type: %d, value: %s\n", propid, dwType, str);
-	return 0;
-};
+	//printf("PROP id: %d, type: %d, value: %s\n", propid, dwType, str);
+	//return 0;
+//};
 
-int callback(void * user_data, cfb_dir dir){
-	print_dir(&dir);
+//int callback(void * user_data, cfb_dir dir){
+	//print_dir(&dir);
 
-	return 0;
-}
+	//return 0;
+//}
 
 int main(int argc, char *argv[])
 {

@@ -331,6 +331,28 @@ enum {
  */
 
 //switch bite order
+uint64_t CFB_DDWORD_SW (uint64_t i)
+{
+    unsigned char c1, c2, c3, c4, c5, c6, c7, c8;
+
+	c1 = i & 255;
+	c2 = (i >> 8) & 255;
+	c3 = (i >> 16) & 255;
+	c4 = (i >> 24) & 255;
+	c5 = (i >> 32) & 255;
+	c6 = (i >> 40) & 255;
+	c7 = (i >> 48) & 255;
+	c8 = (i >> 56) & 255;
+
+	return ((uint64_t)c1 << 56) 
+			 + ((uint64_t)c2 << 48) 
+			 + ((uint64_t)c3 << 40) 
+			 + ((uint64_t)c4 << 32) 
+			 + ((uint64_t)c5 << 24) 
+			 + ((uint64_t)c6 << 16) 
+			 + ((uint64_t)c7 << 8) 
+			 + c8;
+}
 DWORD CFB_DWORD_SW (DWORD i)
 {
     unsigned char c1, c2, c3, c4;
@@ -340,7 +362,10 @@ DWORD CFB_DWORD_SW (DWORD i)
 	c3 = (i >> 16) & 255;
 	c4 = (i >> 24) & 255;
 
-	return ((int)c1 << 24) + ((int)c2 << 16) + ((int)c3 << 8) + c4;
+	return ((uint32_t)c1 << 24) 
+		   + ((uint32_t)c2 << 16) 
+			 + ((uint32_t)c3 << 8) 
+			 + c4;
 }
 
 WORD CFB_WORD_SW (WORD i)
@@ -890,7 +915,7 @@ size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
 		uint16_t utf16_char;
 		if ((*ptr & 240) == 240) {
 			//take last 3 bit from first char
-			uint16_t byte0 = (*ptr++ & 7) << 18;	
+			uint32_t byte0 = (*ptr++ & 7) << 18;	
 			
 			//take last 6 bit from second char
 			uint16_t byte1 = (*ptr++ & 63) << 12;	
