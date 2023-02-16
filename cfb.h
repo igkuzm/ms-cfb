@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 15.02.2023
+ * Last Modified Date: 16.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -743,7 +743,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
  */ 
 	//get all DIFAT
 	//first 109 FAT are in header
-	DIFAT = malloc(sizeof(SECT) * 109);
+	DIFAT = (SECT *)malloc(sizeof(SECT) * 109);
 	for (dfat_len = 0; dfat_len < 109; ++dfat_len) {
 		//copy difat data to array
 		DIFAT[dfat_len] = cfb->header._sectFat[dfat_len];
@@ -773,7 +773,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 						realloc(DIFAT, sizeof(SECT) * (dfat_len + 1));	
 				if (!DIFAT_p)
 					break;
-				DIFAT = DIFAT_p;
+				DIFAT = (SECT *)DIFAT_p;
 
 				//add to array
 				fread(&DIFAT[dfat_len++], 4, 1, fp);
@@ -795,7 +795,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
  */
 
 	//alloc FAT array
-	FAT = malloc(dfat_len * (1 << cfb->header._uSectorShift) * sizeof(SECT));
+	FAT = (struct FAT *)malloc(dfat_len * (1 << cfb->header._uSectorShift) * sizeof(SECT));
 	if (!FAT)
 		return CFB_ALLOC_ERR;
 	
@@ -838,23 +838,23 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 		cfb_get_dir_by_sid(cfb, &cfb->root, 0);
 
 		//allocate mFAT
-		mFAT = malloc(cfb->root._ulSize);
+		mFAT = (struct FAT *)malloc(cfb->root._ulSize);
 		if (!mFAT)
 			return CFB_ALLOC_ERR;
 
-		FSINDEX index = cfb->root._sectStart; // start position in FAT chain
+		SECT sect = cfb->root._sectStart; // start position in FAT chain
 	
 		DWORD ssize = 1 << cfb->header._uSectorShift;
 		DWORD sstart = ssize;
 	
 		//seek to start offset
-		fseek(cfb->fp, index * ssize + sstart, SEEK_SET);
+		fseek(cfb->fp, sect * ssize + sstart, SEEK_SET);
 
 		int mfat_len = 0; //len of mFAT array
 		
 		//get data from stream
 		DWORD ch;
-		while (index != ENDOFCHAIN) {
+		while (sect != ENDOFCHAIN) {
 			for (i = 0; i < ssize/4; ++i) {
 				fread(&ch, 4, 1, fp);
 				if (cfb->biteOrder)
@@ -863,8 +863,10 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 			}
 		
 			// get next FAT/miniFAT
-			index = FAT[index].n;
-			fseek(cfb->fp, index * ssize + sstart, SEEK_SET);
+			sect = FAT[sect].n;
+			if (cfb->biteOrder)
+				sect = CFB_DWORD_SW(sect);
+			fseek(cfb->fp, sect * ssize + sstart, SEEK_SET);
 		}
 
 		cfb->mfat = (SECT *)mFAT;
