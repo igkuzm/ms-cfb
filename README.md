@@ -16,55 +16,56 @@ The CFB is used in MS Office .doc, .xls, .ppt files.
 ### cfb.h 
 Header only library to read CFB file and get streams.
 ```c
-	#include "cfb.h"
-	
-	int main(int argc, char *argv[]){
-		struct cfb cfb;
-		if(cfb_open(&cfb, "1.doc") == 0){
-			FILE *summary = cfb_get_stream(&cfb, "\005SummaryInformation");
-			
-			// do your magic with file
-			
-			fclose(summary);
-			cfb_close(&cfb);
-		}
-	}
+#include "cfb.h"
+
+int main(int argc, char *argv[]){
+    struct cfb cfb;
+    if(cfb_open(&cfb, "1.doc") == 0){
+        FILE *summary = 
+            cfb_get_stream(&cfb, "\005SummaryInformation");
+        
+        // do your magic with file
+        
+        fclose(summary);
+        cfb_close(&cfb);
+    }
+}
 	
 ```
 
 ### property_set.h 
 Header only library to MS Property Set file and get list of properties.
 ```c
-	#include "property_set.h"
-	
-	int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value){
-		char * str = NULL;
-		
-		if (dwType == 30){
-			char buf[BUFSIZ];
-			strncpy(buf, (char*)value + 4, BUFSIZ);
-			str = buf;
-		}
-		else if (dwType == 2){
-			char buf[10];
-			sprintf(buf, "%d", *(uint16_t*)value);
-			str = buf;
-		}
-		else if (dwType == 3){
-			char buf[10];
-			sprintf(buf, "%d", *(uint32_t*)value);
-			str = buf;
-		}
+#include "property_set.h"
 
-		printf("PROP id: %d, type: %d, value: %s\n", propid, dwType, str);
-		return 0;
-	}
-	
-	int main(int argc, char *argv[]){
-			FILE *summary; // File stream with property set list
-			
-			property_set_get(summary, NULL, prop_cb);
-		}
-	}
+int prop_cb(void * user_data, uint32_t propid, uint32_t dwType, uint8_t * value){
+    char * str = NULL;
+    
+    if (dwType == 30){
+        char buf[BUFSIZ];
+        strncpy(buf, (char*)value + 4, BUFSIZ);
+        str = buf;
+    }
+    else if (dwType == 2){
+        char buf[10];
+        sprintf(buf, "%d", *(uint16_t*)value);
+        str = buf;
+    }
+    else if (dwType == 3){
+        char buf[10];
+        sprintf(buf, "%d", *(uint32_t*)value);
+        str = buf;
+    }
+
+    printf("PROP id: %d, type: %d, value: %s\n", propid, dwType, str);
+    return 0;
+}
+
+int main(int argc, char *argv[]){
+        FILE *summary; // File stream with property set list
+        
+        property_set_get(summary, NULL, prop_cb);
+    }
+}
 	
 ```

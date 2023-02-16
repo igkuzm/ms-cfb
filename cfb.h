@@ -491,7 +491,10 @@ int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
 	int i;
 	
 	//goto dir data
-	ULONG p = 512 + sid*sizeof(cfb_dir) + (cfb->header._sectDirStart << cfb->header._uSectorShift);
+	ULONG p = 
+		512 
+		+ sid*sizeof(cfb_dir) 
+		+ (cfb->header._sectDirStart << cfb->header._uSectorShift);
 	fseek(cfb->fp, p, SEEK_SET);
 
 	//copy dir data
