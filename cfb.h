@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 16.02.2023
+ * Last Modified Date: 17.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -476,6 +476,8 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 		
 		// get next FAT/miniFAT
 		p = chain[p];
+		if (cfb->biteOrder)
+			p = CFB_DWORD_SW(p);
 		fseek(cfb->fp, p * ssize + sstart, SEEK_SET);
 	}
 
