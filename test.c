@@ -2,7 +2,7 @@
  * File              : test.c
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 15.02.2023
+ * Last Modified Date: 17.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -140,9 +140,9 @@ int main(int argc, char *argv[])
 
 	//property_set_get(si, NULL, prop_cb);
 	
-	FILE *doc = cfb_get_stream(&cfb, "WordDocument");
-	if (!doc)
-		printf("Can't open WordDocument\n");
+	/*FILE *doc = cfb_get_stream(&cfb, "WordDocument");*/
+	/*if (!doc)*/
+		/*printf("Can't open WordDocument\n");*/
 
 	/*printf("SIZE OF FibBase: %ld\n", sizeof(FibBase));*/
 	/*printf("SIZE OF FibRgW97: %ld\n", sizeof(FibRgW97));*/
