@@ -2213,14 +2213,71 @@ typedef struct FibRgCswNewData2007
 } FibRgCswNewData2007;
 
 /*
+ * Sprm
+ * The Sprm structure specifies a modification to a property of a character, paragraph, 
+ * table, or section.
+ */ 
+struct Sprm {
+	uint16_t ispmdAsgcspra; //ispmd (9 bits): An unsigned integer that, when combined 
+							//with fSpec, specifies the property being modified. See 
+							//the tables in the Single Property Modifiers section (2.6) 
+							//for the complete list of valid ispmd, fSpec, spra 
+							//combinations for each sgc. 
+							// 
+							// A - fSpec (1 bit): When combined with ispmd, specifies the 
+							// property being modified. See the tables in the Single 
+							// Property Modifiers section (2.6) for the complete list of 
+							// valid ispmd, fSpec, spra combinations for each sgc.
+							// 
+							// sgc (3 bits): An unsigned integer that specifies the kind of
+							// document content to which this Sprm applies. The following 
+							// table specifies the valid values and their meanings.
+							// Sgc: Meaning
+							// 1:    Sprm is modifying a paragraph property.
+							// 2:    Sprm is modifying a character property.
+							// 3:    Sprm is modifying a picture property.
+							// 4:    Sprm is modifying a section property.
+							// 5:    Sprm is modifying a table property.
+							// 
+							// spra (3 bits): An unsigned integer that specifies the size 
+							// of the operand of this Sprm. The following table specifies 
+							// the valid values and their meanings 
+							// Spra: Meaning
+							// 0 Operand is a ToggleOperand (which is 1 byte in size).
+							// 1 Operand is 1 byte.
+							// 2 Operand is 2 bytes.
+							// 3 Operand is 4 bytes.
+							// 4 Operand is 2 bytes.
+							// 5 Operand is 2 bytes.
+							// 6 Operand is of variable length. The first byte of the 
+							// operand indicates the size of the rest of the operand, 
+							// except in the cases of sprmTDefTable and sprmPChgTabs.
+							// 7 Operand is 3 bytes.
+};
+
+uint8_t SprmIspmd(struct Sprm *sprm){
+	return sprm->ispmdAsgcspra & 0x1F;
+}
+uint8_t SprmA(struct Sprm *sprm){
+	return (sprm->ispmdAsgcspra & 0x20) >> 9;
+}
+uint8_t SprmSgc(struct Sprm *sprm){
+	return (sprm->ispmdAsgcspra & 0x1C0) >> 10;
+}
+uint8_t SprmSpra(struct Sprm *sprm){
+	return (sprm->ispmdAsgcspra & 0xE00) >> 13;
+}
+
+
+/*
  * Prl
  * The Prl structure is a Sprm that is followed by an operand. The Sprm specifies a property to 
  * modify, and the operand specifies the new value.
  */
 struct Prl {
-	uint16_t sprm;   //(2 bytes): Sprm which specifies the property to be modified
-	uint8_t *operand;//(variable): The meaning of the operand depends on the sprm(Single 
-					 //Property Modifiers).
+	struct Sprm sprm;   //(2 bytes): Sprm which specifies the property to be modified
+	void *operand;      //(variable): The meaning of the operand depends on the sprm(Single 
+					    //Property Modifiers).
 };
 
 /*
@@ -2465,8 +2522,8 @@ typedef struct cfb_doc
  * 6.  Read Fib.cslw.
  * 7.  Read the minimum of Fib.cslw * 4 bytes and the size, in bytes, of the in-memory version of
  *     FibRgLw97 into FibRgLw97.
- * 8.  If the application expects fewer bytes than indicated by Fib.cslw, advance by the difference
- *     thereby skipping the unknown portion of FibRgLw97.
+ * 8.  If the application expects fewer bytes than indicated by Fib.cslw, advance by the 
+ *     difference thereby skipping the unknown portion of FibRgLw97.
  * 9.  Read Fib.cbRgFcLcb.
  * 10. Read the minimum of Fib.cbRgFcLcb * 8 bytes and the size, in bytes, of the in-memory 
  *     version of FibRgFcLcb into FibRgFcLcb.
@@ -2900,6 +2957,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	LOG("_clx_init: read GrpPrl");
 #endif		
 		fread(clx->RgPrc->data->GrpPrl, cbGrpprl, 1, doc->Table);
+		/* TODO:  parse GrpPrl + byteOrder */
 
 		//read ch again
 #ifdef DEBUG
@@ -2909,13 +2967,18 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	}	
 
 	//get PlcPcd
+#ifdef DEBUG
+	LOG("_clx_init: allocate PlcPcd");
+#endif
 	clx->Pcdt = malloc(sizeof(struct Pcdt));
 	if (!clx->Pcdt)
 		return DOC_ERR_ALLOC;	
 
 	//read Pcdt->clxt - this must be 0x02
 	clx->Pcdt->clxt = ch;
-	printf("Pcdt->clxt: %x\n", clx->Pcdt->clxt);
+#ifdef DEBUG
+	LOG("_clx_init: Pcdt->clxt: %x\n", clx->Pcdt->clxt);
+#endif	
 	if (clx->Pcdt->clxt != 0x02) { //some error
 		return DOC_ERR_FILE;		
 	}
@@ -2925,12 +2988,16 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	if (doc->byteOrder){
 		clx->Pcdt->lcb = CFB_DWORD_SW(clx->Pcdt->lcb);
 	}
-	printf("Pcdt->lcb: %d\n", clx->Pcdt->lcb);
+#ifdef DEBUG
+	LOG("_clx_init: Pcdt->lcb: %d\n", clx->Pcdt->lcb);
+#endif	
 
 	//get PlcPcd
 	_plcpcd_init(&(clx->Pcdt->PlcPcd), clx->Pcdt->lcb, doc);
 	
-	printf("DOC aCP: %d, PCD: %d\n", clx->Pcdt->PlcPcd.aCPl, clx->Pcdt->PlcPcd.aPcdl);
+#ifdef DEBUG
+	LOG("_clx_init: aCP: %d, PCD: %d\n", clx->Pcdt->PlcPcd.aCPl, clx->Pcdt->PlcPcd.aPcdl);
+#endif		
 
 #ifdef DEBUG
 	LOG("_clx_init done\n");
@@ -3015,6 +3082,10 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 //} 
 
 int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
+#ifdef DEBUG
+	LOG("start cfb_doc_init\n");
+#endif
+	
 	int ret = 0;
 	//get byte order
 	doc->byteOrder = cfb->biteOrder;
@@ -3051,9 +3122,18 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	if (ret)
 		return ret;	
 
+#ifdef DEBUG
+	LOG("cfb_doc_init done\n");
+#endif	
 	return 0;
 }
-void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
+void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
+		void *user_data,
+		int (*text)(
+			void *user_data,
+			char *str
+			)		
+		){
 	// get char for each CP
 	// CPs are in range in aCp
 	int i; //aCp iterator
@@ -3087,9 +3167,9 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
 			for (cp = PlcPcd->aCp[i]; cp < PlcPcd->aCp[i+1]; cp++){
 				//DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
 				//fseek(doc->WordDocument, off, SEEK_SET);	
-				char c;
-				fread(&c, 2, 1, doc->WordDocument);			
-				printf("%c", c);
+				char c[2] = {0};
+				fread(c, 1, 1, doc->WordDocument);			
+				text(user_data, c);
 			}
 
 		} else {
@@ -3107,9 +3187,9 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
 				//fseek(doc->WordDocument, off, SEEK_SET);	
 				WORD u;
 				fread(&u, 2, 1, doc->WordDocument);
-				char utf8[2];
+				char utf8[4]={0};
 				_utf16_to_utf8(&u, 1, utf8);
-				printf("%s", utf8);
+				text(user_data, utf8);
 			}
 		}
 	}
@@ -3193,10 +3273,10 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd){
  * 7. Set cp to PlcPcd.aCp[i+1]. Set i to i + 1. Go to step 2.
 */
 
-int cfb_doc_get_text(
+int cfb_doc_parse(
 		struct cfb *cfb,
 		void *user_data,
-		int (*callback)(
+		int (*text)(
 			void *user_data,
 			char *str
 			)
@@ -3211,7 +3291,7 @@ int cfb_doc_get_text(
 		return ret;
 
 	//get text
-	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd));
+	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd), user_data, text);
 
 	return 0;
 }
