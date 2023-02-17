@@ -2725,13 +2725,24 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 };
 
 FILE *_table_stream(cfb_doc_t *doc, struct cfb *cfb){
+#ifdef DEBUG
+	LOG("start _table_stream\n");
+#endif	
+	char *table = "0Table";
 	Fib *fib = &doc[0].fib;
 	if (FibBaseG(fib[0].base))
-		return cfb_get_stream(cfb, "1Table");
-	return cfb_get_stream(cfb, "0Table");
+		table = "1Table";
+#ifdef DEBUG
+	LOG("_table_stream: table: %s\n", table);
+#endif	
+	return cfb_get_stream(cfb, table);
 }
 
 int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
+#ifdef DEBUG
+	LOG("start _plcpcd_init\n");
+#endif	
+	
 	int i;
 
 	//get lastCP
@@ -2749,6 +2760,13 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	else
 		lastCp = doc->fib.rgLw97->ccpText;
 
+#ifdef DEBUG
+	LOG("_plcpcd_init: lastCp: %d\n", lastCp);
+#endif	
+
+#ifdef DEBUG
+	LOG("_plcpcd_init: allocate aCP\n");
+#endif	
 	//allocate aCP
 	PlcPcd->aCp = malloc(4);
 	if (!PlcPcd->aCp){
@@ -2763,22 +2781,33 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 		if (doc->byteOrder){
 			ch = CFB_DWORD_SW(ch);
 		}
-		//printf("CP: %d\n", ch);
 		PlcPcd->aCp[i++] = ch;
+#ifdef DEBUG
+	LOG("_plcpcd_init: aCp[%d]: %u\n", PlcPcd->aCp[i], ch);
+#endif		
 		if (ch == lastCp)
 			break;
 
 		//realloc aCp
+#ifdef DEBUG
+	LOG("_plcpcd_init: realloc aCP with size: %u\n", (i+1)*4);
+#endif
 		void *ptr = realloc(PlcPcd->aCp, (i+1)*4);
 		if(!ptr)
 			break;
 		PlcPcd->aCp = ptr;
 	}
+#ifdef DEBUG
+	LOG("_plcpcd_init: number of cp in array: %d\n", i);
+#endif	
 	//number of cp in array
 	PlcPcd->aCPl = i;
 
 	//read PCD - has 64bit
 	uint32_t size = len - i*4;
+#ifdef DEBUG
+	LOG("_plcpcd_init: allocate aCP with size: %u\n", size);
+#endif	
 	PlcPcd->aPcd = malloc(size);
 	if (!PlcPcd->aPcd){
 		free(PlcPcd->aCp);	
@@ -2788,6 +2817,10 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	fread(PlcPcd->aPcd, size, 1, doc->Table);
 	//number of Pcd in array
 	PlcPcd->aPcdl = size / 8;
+#ifdef DEBUG
+	LOG("_plcpcd_init: number of Pcd in array: %d\n", PlcPcd->aPcdl);
+#endif	
+	
 	if (doc->byteOrder){
 		for (i = 0; i < PlcPcd->aPcdl; ++i) {
 			PlcPcd->aPcd[i].ABCfR2 = CFB_WORD_SW(PlcPcd->aPcd[i].ABCfR2); 
@@ -2796,24 +2829,39 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 		}
 	}
 
+#ifdef DEBUG
+	LOG("_plcpcd_init: PlcPcd->aPcd[%d]: ABCfR2: %x, FC: %x, PRM: %x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
+#endif	
 	
-	//for (i = 0; i < doc->nPcd; ++i) {
-		//printf("PlcPcd->aPcd[%d]: ABCfR2: %x, FC: %x, PRM: %x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
-	//}
+#ifdef DEBUG
+	LOG("_plcpcd_init done\n");
+#endif	
 
 	return 0;
 }
 
 int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
+#ifdef DEBUG
+	LOG("start _clx_init\n");
+#endif
+
 	//get clx
 	uint8_t ch;
 	fseek(doc->Table, fcClx, SEEK_SET);
 	fread(&ch, 1, 1, doc->Table);
-	printf("First bite of CLX: %x\n", ch);
+#ifdef DEBUG
+	LOG("_clx_init: first bite of CLX: %x\n", ch);
+#endif
 	
 	if (ch == 0x01){ //we have RgPrc (Prc array)
+#ifdef DEBUG
+	LOG("_clx_init: we have RgPrc (Prc array)");
+#endif		
 		//allocate RgPrc
+#ifdef DEBUG
+	LOG("_clx_init: allocate RgPrc");
+#endif
 		clx->RgPrc = malloc(sizeof(struct Prc));
 		if (!clx->RgPrc)
 			return DOC_ERR_ALLOC;
@@ -2823,10 +2871,16 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 		if (doc->byteOrder){
 			cbGrpprl = CFB_WORD_SW(cbGrpprl);
 		}
+#ifdef DEBUG
+	LOG("_clx_init: the first 2 bite of PrcData is cbGrpprl: %x\n", cbGrpprl);
+#endif		
 		if (cbGrpprl > 0x3FA2) //error
 			return DOC_ERR_FILE;		
 		
 		//allocate RgPrc->data 
+#ifdef DEBUG
+	LOG("_clx_init: allocate RgPrc->data");
+#endif
 		clx->RgPrc->data = malloc(sizeof(struct PrcData));
 		if (!clx->RgPrc->data)
 			return DOC_ERR_ALLOC;
@@ -2834,14 +2888,23 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 		clx->RgPrc->data->cbGrpprl = cbGrpprl;
 
 		//allocate GrpPrl
+#ifdef DEBUG
+	LOG("_clx_init: allocate GrpPrl with size: %x", cbGrpprl);
+#endif		
 		clx->RgPrc->data->GrpPrl = malloc(cbGrpprl);
 		if (!clx->RgPrc->data->GrpPrl)
 			return DOC_ERR_ALLOC;
 		
 		//read GrpPrl
+#ifdef DEBUG
+	LOG("_clx_init: read GrpPrl");
+#endif		
 		fread(clx->RgPrc->data->GrpPrl, cbGrpprl, 1, doc->Table);
 
 		//read ch again
+#ifdef DEBUG
+	LOG("_clx_init: again first bite of CLX: %x\n", ch);
+#endif		
 		fread(&ch, 1, 1, doc->Table);
 	}	
 
@@ -2868,6 +2931,11 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	_plcpcd_init(&(clx->Pcdt->PlcPcd), clx->Pcdt->lcb, doc);
 	
 	printf("DOC aCP: %d, PCD: %d\n", clx->Pcdt->PlcPcd.aCPl, clx->Pcdt->PlcPcd.aPcdl);
+
+#ifdef DEBUG
+	LOG("_clx_init done\n");
+#endif
+	
 	return 0;
 }
 
