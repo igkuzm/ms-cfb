@@ -3187,6 +3187,9 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 				//fseek(doc->WordDocument, off, SEEK_SET);	
 				WORD u;
 				fread(&u, 2, 1, doc->WordDocument);
+				if (doc->byteOrder){
+					u = CFB_WORD_SW(u);
+				}
 				char utf8[4]={0};
 				_utf16_to_utf8(&u, 1, utf8);
 				text(user_data, utf8);
