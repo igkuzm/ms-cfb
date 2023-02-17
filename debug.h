@@ -2,12 +2,11 @@
  * File              : debug.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 07.11.2022
- * Last Modified Date: 18.11.2022
+ * Last Modified Date: 17.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
 #include "cfb.h"
-
 
 void print_cfb_header(struct cfb * cfb){
 	int i;
@@ -70,7 +69,9 @@ void print_mfat_stream(struct cfb * cfb){
 void print_dir(cfb_dir * dir){
 	int i;
 	printf("********************************************\n");
-	printf("DIR %s\n", cfb_dir_name(dir));
+	char dirname[BUFSIZ];
+	cfb_dir_name(dir, dirname);
+	printf("DIR %s\n", dirname);
 	printf("********************************************\n");	
 	printf("_ab: ");
 	for (i = 0; i < dir->_cb; ++i) 
@@ -102,3 +103,5 @@ void print_dir(cfb_dir * dir){
 	printf("_dptPropType: 0x%x\n", dir->_dptPropType);
 	printf("********************************************\n");
 }
+
+// vim:ft=c

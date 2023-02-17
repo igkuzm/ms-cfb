@@ -3285,6 +3285,10 @@ int cfb_doc_parse(
 			)
 		)
 {
+#ifdef DEBUG
+	LOG("start cfb_doc_parse\n");
+#endif
+	
 	int ret = 0;
 
 	//Read the FIB from offset zero in the WordDocument Stream
@@ -3296,6 +3300,10 @@ int cfb_doc_parse(
 	//get text
 	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd), user_data, text);
 
+#ifdef DEBUG
+	LOG("cfb_doc_parse done\n");
+#endif
+	
 	return 0;
 }
 

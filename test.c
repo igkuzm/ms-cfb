@@ -115,10 +115,10 @@ int main(int argc, char *argv[])
 
 	struct cfb cfb;
 	int error = cfb_open(&cfb, "1.doc");
-	if (error)
-		printf("ERROR OPEN FILE: %x\n", error);
+	//if (error)
+		//printf("ERROR OPEN FILE: %x\n", error);
 
-	print_cfb_header(&cfb);
+	//print_cfb_header(&cfb);
 
 	/*cfb_get_dirs(&cfb, NULL, callback);*/
 
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 	/*printf("SIZE OF FibRgW97: %ld\n", sizeof(FibRgW97));*/
 	int ret = cfb_doc_parse(&cfb, NULL, text_cb);
 
-	printf("RET: %d\n", ret);
+	//printf("RET: %d\n", ret);
 
 	return 0;
 }

@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 17.02.2023
+ * Last Modified Date: 18.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -426,6 +426,10 @@ void _cfb_dir_sw(cfb_dir * dir){
 
 //return len of utf8 string
 size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
+#ifdef DEBUG
+	LOG("start _utf16_to_utf8\n");
+#endif		
+	
 	int i, k = 0;
 	for (i = 0; i < len; ++i) {
 		WORD wc = utf16[i];
@@ -576,14 +580,14 @@ int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
 	return cfb_dir_by_sid(cfb, sid, dir, cfb_dir_callback);
 }
 
-char * cfb_dir_name(cfb_dir * dir){
+int cfb_dir_name(cfb_dir * dir, char * name){
 #ifdef DEBUG
 	LOG("start cfb_dir_name\n");
 #endif		
 	
-	char * name = malloc(2*dir->_cb);
-	if (!name)
-		return NULL;
+#ifdef DEBUG
+	LOG("cfb_dir_name: allocate *name with size: %ld\n", 2*dir->_cb);
+#endif		
 	
 	int size = dir->_cb/2;
 	WORD ab[size];
@@ -598,13 +602,13 @@ char * cfb_dir_name(cfb_dir * dir){
 	}
 
 	if (!_utf16_to_utf8(ab, dir->_cb, name))
-		return NULL;
+		return -1;
 
 #ifdef DEBUG
 	LOG("cfb_dir_name done\n");
 #endif	
 
-	return name;
+	return 0;
 }
 
 
@@ -618,7 +622,9 @@ int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user
 	if(!dir)
 		return -1;
 	//check name
-	char * dirname = cfb_dir_name(dir);
+	char dirname[BUFSIZ]; 
+	if (cfb_dir_name(dir, dirname))
+		return -1;
 	int res;
 	size_t name_len = strlen(name);
 	size_t dirname_len = strlen(dirname);
@@ -628,7 +634,6 @@ int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user
 		res = 1;
 	else 
 		res = strcmp(name, dirname);
-	free(dirname);
 	if (res == 0)
 		callback(user_data, *dir);
 	if (res < 0){
@@ -1004,28 +1009,29 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 	if (cfb->header._csectMiniFat > 0){
 		// get root dir
 #ifdef DEBUG
-	LOG("_cfb_init: get root dir\n");
+	//LOG("_cfb_init: get root dir\n");
 #endif		
-		cfb_get_dir_by_sid(cfb, &cfb->root, 0);
+		//cfb_get_dir_by_sid(cfb, &cfb->root, 0);
+		//FILE *root_stream = cfb_get_stream_by_dir(cfb, &cfb->root);
 
+		DWORD ssize = 1 << cfb->header._uSectorShift;
+		DWORD mfatsize = 1 << cfb->header._uMiniSectorShift;
+		
 		//allocate mFAT
 #ifdef DEBUG
-	LOG("_cfb_init: allocate mFAT with size: %u\n", cfb->root._ulSize);
+	LOG("_cfb_init: allocate mFAT with size: %u\n", cfb->header._csectMiniFat * mfatsize );
 #endif		
-		mFAT = (struct FAT *)malloc(cfb->root._ulSize);
+		mFAT = (struct FAT *)malloc(cfb->header._csectMiniFat * mfatsize);
 		if (!mFAT)
 			return CFB_ALLOC_ERR;
 
-		SECT sect = cfb->root._sectStart; // start position in FAT chain
+		SECT sect = cfb->header._sectMiniFatStart; // start position in mFAT chain
 #ifdef DEBUG
-	LOG("_cfb_init: start position of mFAT in FAT chain: %u\n", cfb->root._sectStart);
+	LOG("_cfb_init: start position of mFAT chain: %u\n", cfb->header._sectMiniFatStart);
 #endif										  
 	
-		DWORD ssize = 1 << cfb->header._uSectorShift;
-		DWORD sstart = ssize;
-	
 		//seek to start offset
-		fseek(cfb->fp, sect * ssize + sstart, SEEK_SET);
+		fseek(cfb->fp, (sect + 1) * ssize, SEEK_SET);
 
 		int mfat_len = 0; //len of mFAT array
 		
@@ -1035,27 +1041,23 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 #endif		
 		DWORD ch;
 		while (sect != ENDOFCHAIN) {
-			for (i = 0; i < ssize/4; ++i) {
-				fread(&ch, 4, 1, fp);
-				if (cfb->biteOrder)
-					ch = CFB_DWORD_SW(ch);
-				mFAT[mfat_len++].n = ch;
+			fread(&ch, 4, 1, cfb->fp);
+			if (cfb->biteOrder)
+				ch = CFB_DWORD_SW(ch);
 #ifdef DEBUG
 	LOG("_cfb_init: mFAT[%d] is %x\n", mfat_len, mFAT[mfat_len].n);
 #endif				
-			}
-		
-			// get next miniFAT
-#ifdef DEBUG
-	LOG("_cfb_init: get next miniFAT\n");
-#endif			
+			mFAT[mfat_len++].n = ch;
+			if (mfat_len >= cfb->header._csectMiniFat)
+				break;
+			//get next FAT
 			sect = FAT[sect].n;
 			if (cfb->biteOrder)
 				sect = CFB_DWORD_SW(sect);
 #ifdef DEBUG
-	LOG("_cfb_init: get next miniFAT: %x\n", sect);
-#endif			
-			fseek(cfb->fp, sect * ssize + sstart, SEEK_SET);
+	LOG("_cfb_init: next mFAT in FAT is %x\n", sect);
+#endif	
+			fseek(cfb->fp, (sect + 1) * ssize, SEEK_SET);
 		}
 
 		cfb->mfat = (SECT *)mFAT;
@@ -1117,6 +1119,10 @@ int cfb_open(struct cfb * cfb, const char * filename){
 
 //resturn len of utf16 string
 size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
+#ifdef DEBUG
+	LOG("start _utf8_to_utf16\n");
+#endif		
+	
 	int i;
 	char *ptr = (char *)utf8;
 	while (*ptr){ //iterate chars
@@ -1223,3 +1229,5 @@ void cfb_close(struct cfb * cfb){
 #endif
 
 #endif //CFB_H_
+
+// vim:ft=c
