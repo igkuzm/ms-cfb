@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 15.02.2023
+ * Last Modified Date: 17.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -2478,6 +2478,9 @@ typedef struct cfb_doc
 */
 
 int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
+#ifdef DEBUG
+	LOG("start _cfb_doc_fib_init\n");
+#endif
 
 	fib->base = NULL;
 	fib->csw = 0;
@@ -2490,11 +2493,19 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	fib->rgCswNew = NULL;
 
 	//allocate fibbase
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: allocate fibbase\n");
+#endif
+	
 	fib->base = (FibBase *)malloc(32);
 	if (!fib->base)
 		return DOC_ERR_ALLOC;
 
 	//read fibbase
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read fibbase\n");
+#endif
+	
 	if (fread(fib->base, 32, 1, fp) != 1){
 		free(fib->base);
 		return DOC_ERR_FILE;
@@ -2510,12 +2521,17 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}
 	
 	//check wIdent
-	/*printf("wIdent: %x\n", fib.base->wIdent);*/
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: check wIdent: %x\n", fib->base->wIdent);
+#endif	
 	if (fib->base->wIdent != 0xA5EC){
 		free(fib->base);
 		return DOC_ERR_HEADER;
 	}	
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read csw\n");
+#endif	
 	//read Fib.csw
 	if (fread(&(fib->csw), 2, 1, fp) != 1){
 		free(fib->base);
@@ -2526,12 +2542,17 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}
 
 	//check csw
-	/*printf("csw: %x\n", fib.csw);*/
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: check csw: %x\n", fib->csw);
+#endif		
 	if (fib->csw != 14) {
 		free(fib->base);
 		return DOC_ERR_HEADER;
 	}
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: allocate FibRgW97\n");
+#endif	
 	//allocate FibRgW97
 	fib->rgW97 = (FibRgW97 *)malloc(28);
 	if (!fib->rgW97){
@@ -2540,6 +2561,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}
 
 	//read FibRgW97
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read FibRgW97\n");
+#endif
 	if (fread(fib->rgW97, 28, 1, fp) != 1){
 		free(fib->base);
 		free(fib->rgW97);
@@ -2549,6 +2573,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		fib->rgW97->lidFE = CFB_WORD_SW(fib->rgW97->lidFE);
 	}
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read Fib.cslw\n");
+#endif	
 	//read Fib.cslw
 	if (fread(&(fib->cslw), 2, 1, fp) != 1){
 		free(fib->base);
@@ -2559,6 +2586,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		fib->cslw = CFB_WORD_SW(fib->cslw);
 	}
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: check cslw: %x\n", fib->cslw);
+#endif	
 	//check cslw
 	printf("cslw: %x\n", fib->cslw);
 	if (fib->cslw != 22) {
@@ -2567,6 +2597,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_HEADER;
 	}	
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: allocate FibRgLw97\n");
+#endif	
 	//allocate FibRgLw97
 	fib->rgLw97 = (FibRgLw97 *)malloc(88);
 	if (!fib->rgLw97){
@@ -2575,6 +2608,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_ALLOC;
 	}
 	
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read Fib.FibRgLw97\n");
+#endif	
 	//read FibRgLw97
 	if (fread(fib->rgLw97, 88, 1, fp) != 1){
 		free(fib->base);
@@ -2593,6 +2629,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		fib->rgLw97->ccpHdrTxbx = CFB_DWORD_SW(fib->rgLw97->ccpHdrTxbx);
 	}
 	
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read Fib.cbRgFcLcb\n");
+#endif	
 	//read Fib.cbRgFcLcb
 	if (fread(&(fib->cbRgFcLcb), 2, 1, fp) != 1){
 		free(fib->base);
@@ -2606,6 +2645,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	
 	/*printf("cbRgFcLcb: %x\n", fib.cbRgFcLcb);*/
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: allocate FibRgLw97 with size: %d\n", fib->cbRgFcLcb*8);
+#endif	
 	//allocate rgFcLcb
 	fib->rgFcLcb = (uint32_t *)malloc(fib->cbRgFcLcb*8);
 	if (!fib->rgFcLcb){
@@ -2615,7 +2657,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_ALLOC;
 	}	
 
-	
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read Fib.rgFcLcb\n");
+#endif	
 	//read rgFcLcb
 	if (fread(fib->rgFcLcb, 8, fib->cbRgFcLcb, fp) != fib->cbRgFcLcb){
 		free(fib->base);
@@ -2631,6 +2675,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		}
 	}
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read Fib.cswNew\n");
+#endif	
 	//read Fib.cswNew
 	fread(&(fib->cswNew), 2, 1, fp);
 	/*printf("cswNew: %x\n", fib.cswNew);*/
@@ -2639,6 +2686,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}
 
 	if (fib->cswNew > 0){
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: allocate FibRgCswNew with size: %d\n", fib->cswNew * 2);
+#endif		
 		//allocate FibRgCswNew
 		fib->rgCswNew = (FibRgCswNew *)malloc(fib->cswNew * 2);
 		if (!fib->rgFcLcb){
@@ -2649,6 +2699,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 			return DOC_ERR_ALLOC;
 		}	
 
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init: read FibRgCswNew\n");
+#endif		
 		//read FibRgCswNew
 		if (fread(fib->rgCswNew, 2, fib->cswNew, fp) != fib->cswNew){
 			free(fib->base);
@@ -2665,6 +2718,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 			}
 		}
 	}
+#ifdef DEBUG
+	LOG("_cfb_doc_fib_init done\n");
+#endif	
 	return 0;
 };
 

@@ -354,7 +354,7 @@ uint64_t CFB_DDWORD_SW (uint64_t i)
 	c7 = (i >> 48) & 255;
 	c8 = (i >> 56) & 255;
 
-	return ((uint64_t)c1 << 56) 
+	uint64_t k = ((uint64_t)c1 << 56) 
 			 + ((uint64_t)c2 << 48) 
 			 + ((uint64_t)c3 << 40) 
 			 + ((uint64_t)c4 << 32) 
@@ -362,6 +362,10 @@ uint64_t CFB_DDWORD_SW (uint64_t i)
 			 + ((uint64_t)c6 << 16) 
 			 + ((uint64_t)c7 << 8) 
 			 + c8;
+#ifdef DEBUG
+	LOG("CFB_DDWORD_SW: %llx to: %llx\n", i, k);
+#endif
+	return k;
 }
 DWORD CFB_DWORD_SW (DWORD i)
 {
@@ -372,10 +376,14 @@ DWORD CFB_DWORD_SW (DWORD i)
 	c3 = (i >> 16) & 255;
 	c4 = (i >> 24) & 255;
 
-	return ((uint32_t)c1 << 24) 
+	u_int32_t k = ((uint32_t)c1 << 24) 
 		   + ((uint32_t)c2 << 16) 
 			 + ((uint32_t)c3 << 8) 
 			 + c4;
+#ifdef DEBUG
+	LOG("CFB_DWORD_SW: %x to: %x\n", i, k);
+#endif	
+	return k;
 }
 
 WORD CFB_WORD_SW (WORD i)
@@ -385,7 +393,11 @@ WORD CFB_WORD_SW (WORD i)
 	c1 = i & 255;
 	c2 = (i >> 8) & 255;
 
-	return (c1 << 8) + c2;
+	uint16_t k = (c1 << 8) + c2;
+#ifdef DEBUG
+	LOG("CFB_WORD_SW: %x to: %x\n", i, k);
+#endif	
+	return k;
 }
 
 void _cfb_dir_sw(cfb_dir * dir){
