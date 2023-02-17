@@ -381,6 +381,7 @@ WORD CFB_WORD_SW (WORD i)
 void _cfb_dir_sw(cfb_dir * dir){
 	
 	dir->_cb = CFB_WORD_SW(dir->_cb);
+	
 	dir->_sidLeftSib = CFB_DWORD_SW(dir->_sidLeftSib);
 	dir->_sidRightSib = CFB_DWORD_SW(dir->_sidRightSib);
 	dir->_sidChild = CFB_DWORD_SW(dir->_sidChild);
