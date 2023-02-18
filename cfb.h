@@ -1013,8 +1013,8 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	LOG("_cfb_init: set mFAT[%d] to %x\n", mfat_len, sect);
 #endif				
 			mFAT[mfat_len++].n = sect;
-			//if (mfat_len >= cfb->header._csectMiniFat)
-				//break;
+			if (mfat_len >= cfb->header._csectMiniFat)
+				break;
 		}
 
 		cfb->mfat = (SECT *)mFAT;
