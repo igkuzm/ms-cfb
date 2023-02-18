@@ -2913,11 +2913,11 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	
 	if (ch == 0x01){ //we have RgPrc (Prc array)
 #ifdef DEBUG
-	LOG("_clx_init: we have RgPrc (Prc array)");
+	LOG("_clx_init: we have RgPrc (Prc array)\n");
 #endif		
 		//allocate RgPrc
 #ifdef DEBUG
-	LOG("_clx_init: allocate RgPrc");
+	LOG("_clx_init: allocate RgPrc\n");
 #endif
 		clx->RgPrc = malloc(sizeof(struct Prc));
 		if (!clx->RgPrc)
@@ -2936,7 +2936,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 		
 		//allocate RgPrc->data 
 #ifdef DEBUG
-	LOG("_clx_init: allocate RgPrc->data");
+	LOG("_clx_init: allocate RgPrc->data\n");
 #endif
 		clx->RgPrc->data = malloc(sizeof(struct PrcData));
 		if (!clx->RgPrc->data)
@@ -2946,7 +2946,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 		//allocate GrpPrl
 #ifdef DEBUG
-	LOG("_clx_init: allocate GrpPrl with size: %x", cbGrpprl);
+	LOG("_clx_init: allocate GrpPrl with size: %x\n", cbGrpprl);
 #endif		
 		clx->RgPrc->data->GrpPrl = malloc(cbGrpprl);
 		if (!clx->RgPrc->data->GrpPrl)
@@ -2954,7 +2954,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 		
 		//read GrpPrl
 #ifdef DEBUG
-	LOG("_clx_init: read GrpPrl");
+	LOG("_clx_init: read GrpPrl\n");
 #endif		
 		fread(clx->RgPrc->data->GrpPrl, cbGrpprl, 1, doc->Table);
 		/* TODO:  parse GrpPrl + byteOrder */
@@ -2968,7 +2968,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 	//get PlcPcd
 #ifdef DEBUG
-	LOG("_clx_init: allocate PlcPcd");
+	LOG("_clx_init: allocate PlcPcd\n");
 #endif
 	clx->Pcdt = malloc(sizeof(struct Pcdt));
 	if (!clx->Pcdt)
