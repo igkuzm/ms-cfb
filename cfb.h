@@ -464,6 +464,9 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	LOG("start cfb_get_stream_by_dir\n");
 #endif
 	ULONG s = dir->_ulSize;    //size of stream
+#ifdef DEBUG
+	LOG("cfb_get_stream_by_dir: stream size: %ld\n", s);
+#endif
 	SECT  p = dir->_sectStart; // start position in FAT/miniFAT chain
 	
 	DWORD ssize;  //sector size	
@@ -507,7 +510,7 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 
 	//copy data
 	DWORD len = 0;
-	while (p < ENDOFCHAIN && len < s) {
+	while (p != ENDOFCHAIN && len < s) {
 		char buf[ssize];
 		fread (buf, ssize, 1, cfb->fp);
 		fwrite(buf, ssize, 1, stream );
@@ -856,7 +859,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 /*
  * The locations of FAT sectors are read from the DIFAT. The FAT is represented in itself, but 
  * not by a chain. A special reserved sector number (FATSECT = 0xFFFFFFFD) is used to mark sectors
- *that are allocated to the FAT.
+ * that are allocated to the FAT.
  */
 
 /*
@@ -867,14 +870,14 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
  * If Header Major Version is 3, there MUST be 127 fields specified to fill a 512-byte sector 
  * minus the "Next DIFAT Sector Location" field.
  *		If Header Major Version is 4, there MUST be 1,023 fields specified to fill a 4,096-byte 
- *sector minus the "Next DIFAT Sector Location" field.
+ * sector minus the "Next DIFAT Sector Location" field.
 */	
 
 /* The DIFAT sectors are linked together by the last field in each DIFAT sector. As an 
  * optimization, the first 109 FAT sectors are represented within the header itself. 
  * No DIFAT sectors are needed in a compound file that is smaller than 6.875 megabytes (MB) for 
  * a 512-byte sector compound file (6.875 MB = (1 header sector + 109 FAT sectors x 128 non-empty
- *entries) × 512 bytes per sector).
+ * entries) × 512 bytes per sector).
  */ 
 	//get all FAT
 	//first 109 FAT are in header
@@ -890,7 +893,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 		if (cfb->biteOrder)
 			ch = CFB_DWORD_SW(ch);		
 #ifdef DEBUG
-	LOG("_cfb_init: set FAT[%d] to %x\n", fat_len, ch);
+	LOG("_cfb_init: set FAT[%d] to %d\n", fat_len, ch);
 #endif
 		FAT[fat_len].n = ch;
 	}
@@ -900,6 +903,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 #endif
 	//start DIFAT is in header _sectDifStart
 	int j = 0; //dfat counter
+printf("DIFAT START: %x\n", cfb->header._sectDifStart);
 	if (cfb->header._sectDifStart != ENDOFCHAIN){
 		
 		SECT from = cfb->header._sectDifStart;
