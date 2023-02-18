@@ -517,8 +517,10 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 		len += ssize;
 		
 		// get next FAT/miniFAT
-		p = chain[p];
-		fseek(cfb->fp, p * ssize + sstart, SEEK_SET);
+		if (p < FATSECT){
+			p = chain[p];
+			fseek(cfb->fp, p * ssize + sstart, SEEK_SET);
+		}
 	}
 
 	fseek(stream, 0, SEEK_SET);
@@ -562,12 +564,12 @@ int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
 	return 0;
 }
 
-int cfb_dir_callback(void * user_data, cfb_dir dir){
+static int cfb_dir_callback(void * user_data, cfb_dir dir){
 #ifdef DEBUG
 	LOG("start cfb_dir_callback\n");
 #endif		
 	
-	cfb_dir * _dir = user_data;
+	cfb_dir * _dir = (cfb_dir *)user_data;
 	*_dir = dir;
 
 #ifdef DEBUG
@@ -576,7 +578,7 @@ int cfb_dir_callback(void * user_data, cfb_dir dir){
 	return 0;
 }
 
-int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
+static int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
 #ifdef DEBUG
 	LOG("start cfb_get_dir_by_sid\n");
 #endif		
@@ -584,7 +586,7 @@ int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
 	return cfb_dir_by_sid(cfb, sid, dir, cfb_dir_callback);
 }
 
-int cfb_dir_name(cfb_dir * dir, char * name){
+static int cfb_dir_name(cfb_dir * dir, char * name){
 #ifdef DEBUG
 	LOG("start cfb_dir_name\n");
 #endif		
@@ -616,7 +618,7 @@ int cfb_dir_name(cfb_dir * dir, char * name){
 }
 
 
-int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
+static int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 #ifdef DEBUG
@@ -670,7 +672,7 @@ int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user
 
 	return 0;
 }
-int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
+static int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 #ifdef DEBUG
@@ -682,7 +684,7 @@ int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
 	return _cfb_dir_find(cfb, &dir, name, user_data, callback);
 }
 
-int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
+static int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
 #ifdef DEBUG
 	LOG("start cfb_get_dir_by_name: %s\n", name);
 #endif		
@@ -690,7 +692,7 @@ int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
 	return cfb_dir_by_name(cfb, name, dir, cfb_dir_callback);
 }
 
-FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
+static FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
 #ifdef DEBUG
 	LOG("start cfb_get_stream_by_sid: %d\n", sid);
 #endif		
@@ -702,7 +704,7 @@ FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
 	return cfb_get_stream_by_dir(cfb, &dir);
 };
 
-FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
+static FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
 #ifdef DEBUG
 	LOG("start cfb_get_stream_by_name for dir: %s\n", name);
 #endif		
@@ -721,7 +723,7 @@ FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
 			cfb_dir *:   cfb_get_stream_by_dir \
 	)((cfb), (arg))	
 
-int _cfb_init(struct cfb * cfb, FILE *fp){
+static int _cfb_init(struct cfb * cfb, FILE *fp){
 #ifdef DEBUG
 	LOG("start _cfb_init\n");
 #endif
@@ -903,8 +905,7 @@ int _cfb_init(struct cfb * cfb, FILE *fp){
 #endif
 	//start DIFAT is in header _sectDifStart
 	int j = 0; //dfat counter
-printf("DIFAT START: %x\n", cfb->header._sectDifStart);
-	if (cfb->header._sectDifStart != ENDOFCHAIN){
+	if (cfb->header._sectDifStart < DIFSECT){
 		
 		SECT from = cfb->header._sectDifStart;
 		
@@ -1006,14 +1007,14 @@ printf("DIFAT START: %x\n", cfb->header._sectDifStart);
 		mFAT[mfat_len++].n = sect;
 
 		//do cycle
-		while (sect != ENDOFCHAIN) {
+		while (sect < DIFSECT) {
 			sect = FAT[sect].n;
 #ifdef DEBUG
 	LOG("_cfb_init: set mFAT[%d] to %x\n", mfat_len, sect);
 #endif				
 			mFAT[mfat_len++].n = sect;
-			if (mfat_len >= cfb->header._csectMiniFat)
-				break;
+			//if (mfat_len >= cfb->header._csectMiniFat)
+				//break;
 		}
 
 		cfb->mfat = (SECT *)mFAT;
@@ -1041,17 +1042,20 @@ printf("DIFAT START: %x\n", cfb->header._sectDifStart);
 
 	//copy data
 	DWORD len = 0;
-	while (p < ENDOFCHAIN && len < s) {
-		fseek(cfb->fp, (p + 1)* ssize, SEEK_SET);
+	while (p != ENDOFCHAIN && len < s) {
+		if (p < FATSECT)
+			fseek(cfb->fp, (p + 1)* ssize, SEEK_SET);
 		char buf[ssize];
 		fread (buf, ssize, 1, cfb->fp);
 		fwrite(buf, ssize, 1, stream );
 		len += ssize;
 		// get next FAT
+		if (p < FATSECT){
 #ifdef DEBUG
 	LOG("_cfb_init: next FAT sector in mini stream: %x\n", FAT[p].n);
 #endif
-		p = FAT[p].n;
+			p = FAT[p].n;
+		}
 	}
 
 	cfb->ministream = stream;

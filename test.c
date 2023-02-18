@@ -2,7 +2,7 @@
  * File              : test.c
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 17.02.2023
+ * Last Modified Date: 18.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	//if (error)
 		//printf("ERROR OPEN FILE: %x\n", error);
 
-	//print_cfb_header(&cfb);
+	print_cfb_header(&cfb);
 
 	/*cfb_get_dirs(&cfb, NULL, callback);*/
 
