@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 18.02.2023
+ * Last Modified Date: 20.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -2568,13 +2568,13 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}
 	if (cfb->biteOrder){
-		fib->base->wIdent        = CFB_WORD_SW(fib->base->wIdent);
-		fib->base->nFib          = CFB_WORD_SW(fib->base->nFib);
-		fib->base->lid           = CFB_WORD_SW(fib->base->lid);
-		fib->base->pnNext        = CFB_WORD_SW(fib->base->pnNext);
-		fib->base->ABCDEFGHIJKLM = CFB_WORD_SW(fib->base->ABCDEFGHIJKLM);
-		fib->base->nFibBack      = CFB_WORD_SW(fib->base->nFibBack);
-		fib->base->lKey          = CFB_DWORD_SW(fib->base->lKey);
+		fib->base->wIdent        = bo_16_sw(fib->base->wIdent);
+		fib->base->nFib          = bo_16_sw(fib->base->nFib);
+		fib->base->lid           = bo_16_sw(fib->base->lid);
+		fib->base->pnNext        = bo_16_sw(fib->base->pnNext);
+		fib->base->ABCDEFGHIJKLM = bo_16_sw(fib->base->ABCDEFGHIJKLM);
+		fib->base->nFibBack      = bo_16_sw(fib->base->nFibBack);
+		fib->base->lKey          = bo_32_sw(fib->base->lKey);
 	}
 	
 	//check wIdent
@@ -2595,7 +2595,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}
 	if (cfb->biteOrder){
-		fib->csw = CFB_WORD_SW(fib->csw);
+		fib->csw = bo_16_sw(fib->csw);
 	}
 
 	//check csw
@@ -2627,7 +2627,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}
 	if (cfb->biteOrder){
-		fib->rgW97->lidFE = CFB_WORD_SW(fib->rgW97->lidFE);
+		fib->rgW97->lidFE = bo_16_sw(fib->rgW97->lidFE);
 	}
 
 #ifdef DEBUG
@@ -2640,14 +2640,13 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}
 	if (cfb->biteOrder){
-		fib->cslw = CFB_WORD_SW(fib->cslw);
+		fib->cslw = bo_16_sw(fib->cslw);
 	}
 
 #ifdef DEBUG
 	LOG("_cfb_doc_fib_init: check cslw: %x\n", fib->cslw);
 #endif	
 	//check cslw
-	printf("cslw: %x\n", fib->cslw);
 	if (fib->cslw != 22) {
 		free(fib->base);
 		free(fib->rgW97);
@@ -2676,14 +2675,14 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}	
 	if (cfb->biteOrder){
-		fib->rgLw97->cbMac      = CFB_DWORD_SW(fib->rgLw97->cbMac);
-		fib->rgLw97->ccpText    = CFB_DWORD_SW(fib->rgLw97->ccpText);
-		fib->rgLw97->ccpFtn     = CFB_DWORD_SW(fib->rgLw97->ccpFtn);
-		fib->rgLw97->ccpHdd     = CFB_DWORD_SW(fib->rgLw97->ccpHdd);
-		fib->rgLw97->ccpAtn     = CFB_DWORD_SW(fib->rgLw97->ccpAtn);
-		fib->rgLw97->ccpEdn     = CFB_DWORD_SW(fib->rgLw97->ccpEdn);
-		fib->rgLw97->ccpTxbx    = CFB_DWORD_SW(fib->rgLw97->ccpTxbx);
-		fib->rgLw97->ccpHdrTxbx = CFB_DWORD_SW(fib->rgLw97->ccpHdrTxbx);
+		fib->rgLw97->cbMac      = bo_32_sw(fib->rgLw97->cbMac);
+		fib->rgLw97->ccpText    = bo_32_sw(fib->rgLw97->ccpText);
+		fib->rgLw97->ccpFtn     = bo_32_sw(fib->rgLw97->ccpFtn);
+		fib->rgLw97->ccpHdd     = bo_32_sw(fib->rgLw97->ccpHdd);
+		fib->rgLw97->ccpAtn     = bo_32_sw(fib->rgLw97->ccpAtn);
+		fib->rgLw97->ccpEdn     = bo_32_sw(fib->rgLw97->ccpEdn);
+		fib->rgLw97->ccpTxbx    = bo_32_sw(fib->rgLw97->ccpTxbx);
+		fib->rgLw97->ccpHdrTxbx = bo_32_sw(fib->rgLw97->ccpHdrTxbx);
 	}
 	
 #ifdef DEBUG
@@ -2697,7 +2696,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}
 	if (cfb->biteOrder){
-		fib->cbRgFcLcb = CFB_WORD_SW(fib->cbRgFcLcb);
+		fib->cbRgFcLcb = bo_16_sw(fib->cbRgFcLcb);
 	}
 	
 	/*printf("cbRgFcLcb: %x\n", fib.cbRgFcLcb);*/
@@ -2728,7 +2727,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	if (cfb->biteOrder){
 		int i;
 		for (i = 0; i < fib->cbRgFcLcb/4; ++i) {
-			fib->rgFcLcb[i] = CFB_DWORD_SW(fib->rgFcLcb[i]);	
+			fib->rgFcLcb[i] = bo_32_sw(fib->rgFcLcb[i]);	
 		}
 	}
 
@@ -2739,7 +2738,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	fread(&(fib->cswNew), 2, 1, fp);
 	/*printf("cswNew: %x\n", fib.cswNew);*/
 	if (cfb->biteOrder){
-		fib->cswNew = CFB_WORD_SW(fib->cswNew);
+		fib->cswNew = bo_16_sw(fib->cswNew);
 	}
 
 	if (fib->cswNew > 0){
@@ -2768,10 +2767,10 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 			return DOC_ERR_FILE;
 		}	
 		if (cfb->biteOrder){
-			fib->rgCswNew->nFibNew = CFB_WORD_SW(fib->rgCswNew->nFibNew);
+			fib->rgCswNew->nFibNew = bo_16_sw(fib->rgCswNew->nFibNew);
 			int i;
 			for (i = 0; i < 4; ++i) {
-				fib->rgCswNew->rgCswNewData[i] = CFB_WORD_SW(fib->rgCswNew->rgCswNewData[i]);
+				fib->rgCswNew->rgCswNewData[i] = bo_16_sw(fib->rgCswNew->rgCswNewData[i]);
 			}
 		}
 	}
@@ -2836,7 +2835,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	uint32_t ch;
 	while(fread(&ch, 4, 1, doc->Table) == 1){
 		if (doc->byteOrder){
-			ch = CFB_DWORD_SW(ch);
+			ch = bo_32_sw(ch);
 		}
 		PlcPcd->aCp[i++] = ch;
 #ifdef DEBUG
@@ -2880,9 +2879,9 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	
 	if (doc->byteOrder){
 		for (i = 0; i < PlcPcd->aPcdl; ++i) {
-			PlcPcd->aPcd[i].ABCfR2 = CFB_WORD_SW(PlcPcd->aPcd[i].ABCfR2); 
-			PlcPcd->aPcd[i].prm = CFB_WORD_SW(PlcPcd->aPcd[i].prm); 
-			PlcPcd->aPcd[i].fc.fc = CFB_DWORD_SW(PlcPcd->aPcd[i].fc.fc); 
+			PlcPcd->aPcd[i].ABCfR2 = bo_16_sw(PlcPcd->aPcd[i].ABCfR2); 
+			PlcPcd->aPcd[i].prm = bo_16_sw(PlcPcd->aPcd[i].prm); 
+			PlcPcd->aPcd[i].fc.fc = bo_32_sw(PlcPcd->aPcd[i].fc.fc); 
 		}
 	}
 
@@ -2926,7 +2925,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 		int16_t cbGrpprl; //the first 2 bite of PrcData - signed integer
 		fread(&cbGrpprl, 2, 1, doc->Table);
 		if (doc->byteOrder){
-			cbGrpprl = CFB_WORD_SW(cbGrpprl);
+			cbGrpprl = bo_16_sw(cbGrpprl);
 		}
 #ifdef DEBUG
 	LOG("_clx_init: the first 2 bite of PrcData is cbGrpprl: %x\n", cbGrpprl);
@@ -2986,7 +2985,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	//read lcb;
 	fread(&(clx->Pcdt->lcb), 4, 1, doc->Table);	
 	if (doc->byteOrder){
-		clx->Pcdt->lcb = CFB_DWORD_SW(clx->Pcdt->lcb);
+		clx->Pcdt->lcb = bo_32_sw(clx->Pcdt->lcb);
 	}
 #ifdef DEBUG
 	LOG("_clx_init: Pcdt->lcb: %d\n", clx->Pcdt->lcb);
@@ -3188,7 +3187,7 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 				WORD u;
 				fread(&u, 2, 1, doc->WordDocument);
 				if (doc->byteOrder){
-					u = CFB_WORD_SW(u);
+					u = bo_16_sw(u);
 				}
 				char utf8[4]={0};
 				_utf16_to_utf8(&u, 1, utf8);

@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 19.02.2023
+ * Last Modified Date: 20.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -21,15 +21,8 @@ extern "C"{
 #include <errno.h>
 #include <sys/types.h>
 
-/*
- * Debugging
- */
-#ifndef logfile
-#define logfile stderr
-#endif
-#ifndef LOG
-#define LOG(...) ({fprintf(logfile, __VA_ARGS__);})
-#endif	
+#include "byteorder.h"
+#include "log.h"
 
 /*
  * A Compound File is made up of a number of virtual streams. These are collections of data that 
@@ -342,88 +335,28 @@ enum {
  * IMP
  */
 
-//switch bite order
-uint64_t CFB_DDWORD_SW (uint64_t i)
-{
-    unsigned char c1, c2, c3, c4, c5, c6, c7, c8;
-
-	c1 = i & 255;
-	c2 = (i >> 8) & 255;
-	c3 = (i >> 16) & 255;
-	c4 = (i >> 24) & 255;
-	c5 = (i >> 32) & 255;
-	c6 = (i >> 40) & 255;
-	c7 = (i >> 48) & 255;
-	c8 = (i >> 56) & 255;
-
-	uint64_t k = ((uint64_t)c1 << 56) 
-			 + ((uint64_t)c2 << 48) 
-			 + ((uint64_t)c3 << 40) 
-			 + ((uint64_t)c4 << 32) 
-			 + ((uint64_t)c5 << 24) 
-			 + ((uint64_t)c6 << 16) 
-			 + ((uint64_t)c7 << 8) 
-			 + c8;
-#ifdef DEBUG
-	LOG("CFB_DDWORD_SW: %llx to: %llx\n", i, k);
-#endif
-	return k;
-}
-DWORD CFB_DWORD_SW (DWORD i)
-{
-    unsigned char c1, c2, c3, c4;
-
-	c1 = i & 255;
-	c2 = (i >> 8) & 255;
-	c3 = (i >> 16) & 255;
-	c4 = (i >> 24) & 255;
-
-	u_int32_t k = ((uint32_t)c1 << 24) 
-		   + ((uint32_t)c2 << 16) 
-			 + ((uint32_t)c3 << 8) 
-			 + c4;
-#ifdef DEBUG
-	LOG("CFB_DWORD_SW: %x to: %x\n", i, k);
-#endif	
-	return k;
-}
-
-WORD CFB_WORD_SW (WORD i)
-{
-    unsigned char c1, c2;
-    
-	c1 = i & 255;
-	c2 = (i >> 8) & 255;
-
-	uint16_t k = (c1 << 8) + c2;
-#ifdef DEBUG
-	LOG("CFB_WORD_SW: %x to: %x\n", i, k);
-#endif	
-	return k;
-}
-
 void _cfb_dir_sw(cfb_dir * dir){
 	
-	dir->_cb = CFB_WORD_SW(dir->_cb);
+	dir->_cb = bo_16_sw(dir->_cb);
 	
-	dir->_sidLeftSib = CFB_DWORD_SW(dir->_sidLeftSib);
-	dir->_sidRightSib = CFB_DWORD_SW(dir->_sidRightSib);
-	dir->_sidChild = CFB_DWORD_SW(dir->_sidChild);
+	dir->_sidLeftSib = bo_32_sw(dir->_sidLeftSib);
+	dir->_sidRightSib = bo_32_sw(dir->_sidRightSib);
+	dir->_sidChild = bo_32_sw(dir->_sidChild);
 	
-	dir->_clsId.a = CFB_DWORD_SW(dir->_clsId.a); 
-	dir->_clsId.b = CFB_DWORD_SW(dir->_clsId.b); 
-	dir->_clsId.c = CFB_DWORD_SW(dir->_clsId.c); 
-	dir->_clsId.d = CFB_DWORD_SW(dir->_clsId.d); 
+	dir->_clsId.a = bo_32_sw(dir->_clsId.a); 
+	dir->_clsId.b = bo_32_sw(dir->_clsId.b); 
+	dir->_clsId.c = bo_32_sw(dir->_clsId.c); 
+	dir->_clsId.d = bo_32_sw(dir->_clsId.d); 
 
-	dir->_dwUserFlags = CFB_DWORD_SW(dir->_dwUserFlags);
-	dir->_time[0].dwLowDateTime = CFB_DWORD_SW(dir->_time[0].dwLowDateTime);
-	dir->_time[0].dwHighDateTime = CFB_DWORD_SW(dir->_time[0].dwHighDateTime);
-	dir->_time[1].dwLowDateTime = CFB_DWORD_SW(dir->_time[1].dwLowDateTime);
-	dir->_time[1].dwHighDateTime = CFB_DWORD_SW(dir->_time[1].dwHighDateTime);	
+	dir->_dwUserFlags = bo_32_sw(dir->_dwUserFlags);
+	dir->_time[0].dwLowDateTime = bo_32_sw(dir->_time[0].dwLowDateTime);
+	dir->_time[0].dwHighDateTime = bo_32_sw(dir->_time[0].dwHighDateTime);
+	dir->_time[1].dwLowDateTime = bo_32_sw(dir->_time[1].dwLowDateTime);
+	dir->_time[1].dwHighDateTime = bo_32_sw(dir->_time[1].dwHighDateTime);	
 
-	dir->_sectStart = CFB_DWORD_SW(dir->_sectStart);
-	dir->_ulSize = CFB_DWORD_SW(dir->_ulSize);
-	dir->_dptPropType = CFB_WORD_SW(dir->_dptPropType);
+	dir->_sectStart = bo_32_sw(dir->_sectStart);
+	dir->_ulSize = bo_32_sw(dir->_ulSize);
+	dir->_dptPropType = bo_16_sw(dir->_dptPropType);
 }
 
 //return len of utf8 string
@@ -461,7 +394,7 @@ size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
 }
 
 SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
-	LOG("get next SECT in FAT chain for: %x\n", sect);
+	LOG("get next SECT in FAT chain for: %x:\t", sect);
 	int i;
 
 	if (sect > MAXSECT)
@@ -491,12 +424,13 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		// read sect
 		SECT ch;
 		if (fread(&ch, 4, 1, cfb->fp) != 1){
-			LOG("Error to read SECT from offset: %x", off);
+			LOG("Error to read SECT from offset: %x\n", off);
 			return ENDOFCHAIN;
 		};
 		if (cfb->biteOrder) 
-			ch = CFB_DWORD_SW(ch);		
+			ch = bo_32_sw(ch);		
 
+		LOG("%x\n", ch);
 		return ch;
 
 	} 
@@ -533,7 +467,7 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 			return ENDOFCHAIN;
 		};
 		if (cfb->biteOrder) 
-			ch = CFB_DWORD_SW(ch);
+			ch = bo_32_sw(ch);
 		DIFAT = ch;	
 	}
 	// get FAT 
@@ -546,7 +480,7 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
-		ch = CFB_DWORD_SW(ch);
+		ch = bo_32_sw(ch);
 	FAT = ch;	
 
 	// get SECT offset
@@ -558,19 +492,20 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
-		ch = CFB_DWORD_SW(ch);
+		ch = bo_32_sw(ch);
+	LOG("%x\n", ch);
 	return ch;	
 }
 
 SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
 
-	LOG("get next SECT in mFAT chain for: %x\n", sect);
+	LOG("get next SECT in mFAT chain for: %x:\t", sect);
 	int i;
 
 	if (sect > MAXSECT)
 		return ENDOFCHAIN;	
 
-	DWORD ssize = 1 << cfb->header._uMiniSectorShift; //sector size
+	DWORD ssize = 1 << cfb->header._uSectorShift; //sector size - for mFAT it is 512(4096)
 	FSINDEX SECTn = ssize/4; // number of sectors in mFAT
 	
 	FSINDEX mFAT_INDEX = sect / SECTn;
@@ -593,13 +528,47 @@ SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
-		ch = CFB_DWORD_SW(ch);
+		ch = bo_32_sw(ch);
+	LOG("%x\n", ch);
 	return ch;	
+}
+
+static int cfb_dir_name(cfb_dir * dir, char * name){
+#ifdef DEBUG
+	LOG("start cfb_dir_name\n");
+#endif		
+	
+#ifdef DEBUG
+	LOG("cfb_dir_name: allocate *name with size: %ld\n", 2*dir->_cb);
+#endif		
+	
+	int size = dir->_cb/2;
+	WORD ab[size];
+	int i, c;
+	for (i = 0, c = 0; i < dir->_cb; ++i, ++c) {
+		char ch0 = dir->_ab[i++];	
+		char ch1 = dir->_ab[i];	
+		if (ch1 == 0)
+			ab[c] = ch0;
+		else
+			ab[c] = (ch0 << 8) + ch1;
+	}
+
+	if (!_utf16_to_utf8(ab, dir->_cb, name))
+		return -1;
+
+#ifdef DEBUG
+	LOG("cfb_dir_name done\n");
+#endif	
+
+	return 0;
 }
 
 FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 #ifdef DEBUG
-	LOG("start cfb_get_stream_by_dir\n");
+	char dirname[BUFSIZ];
+	cfb_dir_name(dir, dirname);	
+	LOG("start cfb_get_stream_by_dir with dirname: %s\n", dirname);
 #endif
 	ULONG s = dir->_ulSize;    //size of stream
 #ifdef DEBUG
@@ -726,38 +695,6 @@ static int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
 	
 	return cfb_dir_by_sid(cfb, sid, dir, cfb_dir_callback);
 }
-
-static int cfb_dir_name(cfb_dir * dir, char * name){
-#ifdef DEBUG
-	LOG("start cfb_dir_name\n");
-#endif		
-	
-#ifdef DEBUG
-	LOG("cfb_dir_name: allocate *name with size: %ld\n", 2*dir->_cb);
-#endif		
-	
-	int size = dir->_cb/2;
-	WORD ab[size];
-	int i, c;
-	for (i = 0, c = 0; i < dir->_cb; ++i, ++c) {
-		char ch0 = dir->_ab[i++];	
-		char ch1 = dir->_ab[i];	
-		if (ch1 == 0)
-			ab[c] = ch0;
-		else
-			ab[c] = (ch0 << 8) + ch1;
-	}
-
-	if (!_utf16_to_utf8(ab, dir->_cb, name))
-		return -1;
-
-#ifdef DEBUG
-	LOG("cfb_dir_name done\n");
-#endif	
-
-	return 0;
-}
-
 
 static int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
 		int (*callback)(void * user_data, cfb_dir dir))
@@ -914,26 +851,26 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 
 	// make byte order change
 	if (cfb->biteOrder){
-		cfb->header._clid.a = CFB_DWORD_SW(cfb->header._clid.a); 
-		cfb->header._clid.b = CFB_DWORD_SW(cfb->header._clid.b); 
-		cfb->header._clid.c = CFB_DWORD_SW(cfb->header._clid.c); 
-		cfb->header._clid.d = CFB_DWORD_SW(cfb->header._clid.d); 
+		cfb->header._clid.a = bo_32_sw(cfb->header._clid.a); 
+		cfb->header._clid.b = bo_32_sw(cfb->header._clid.b); 
+		cfb->header._clid.c = bo_32_sw(cfb->header._clid.c); 
+		cfb->header._clid.d = bo_32_sw(cfb->header._clid.d); 
 
-		cfb->header._uMinorVersion = CFB_WORD_SW(cfb->header._uMinorVersion);
-		cfb->header._uDllVersion = CFB_WORD_SW(cfb->header._uDllVersion);
-		cfb->header._uSectorShift = CFB_WORD_SW(cfb->header._uSectorShift);
-		cfb->header._uMiniSectorShift = CFB_WORD_SW(cfb->header._uMiniSectorShift);
-		cfb->header._usReserved = CFB_WORD_SW(cfb->header._usReserved);
-		cfb->header._ulReserved1 = CFB_DWORD_SW(cfb->header._ulReserved1); 
-		cfb->header._ulReserved2 = CFB_DWORD_SW(cfb->header._ulReserved2); 
-		cfb->header._csectFat = CFB_DWORD_SW(cfb->header._csectFat); 
-		cfb->header._sectDirStart = CFB_DWORD_SW(cfb->header._sectDirStart); 
-		cfb->header._signature = CFB_DWORD_SW(cfb->header._signature); 
-		cfb->header._ulMiniSectorCutoff = CFB_DWORD_SW(cfb->header._ulMiniSectorCutoff); 
-		cfb->header._sectMiniFatStart = CFB_DWORD_SW(cfb->header._sectMiniFatStart); 
-		cfb->header._csectMiniFat = CFB_DWORD_SW(cfb->header._csectMiniFat); 
-		cfb->header._sectDifStart = CFB_DWORD_SW(cfb->header._sectDifStart); 
-		cfb->header._csectDif = CFB_DWORD_SW(cfb->header._csectDif); 
+		cfb->header._uMinorVersion = bo_16_sw(cfb->header._uMinorVersion);
+		cfb->header._uDllVersion = bo_16_sw(cfb->header._uDllVersion);
+		cfb->header._uSectorShift = bo_16_sw(cfb->header._uSectorShift);
+		cfb->header._uMiniSectorShift = bo_16_sw(cfb->header._uMiniSectorShift);
+		cfb->header._usReserved = bo_16_sw(cfb->header._usReserved);
+		cfb->header._ulReserved1 = bo_32_sw(cfb->header._ulReserved1); 
+		cfb->header._ulReserved2 = bo_32_sw(cfb->header._ulReserved2); 
+		cfb->header._csectFat = bo_32_sw(cfb->header._csectFat); 
+		cfb->header._sectDirStart = bo_32_sw(cfb->header._sectDirStart); 
+		cfb->header._signature = bo_32_sw(cfb->header._signature); 
+		cfb->header._ulMiniSectorCutoff = bo_32_sw(cfb->header._ulMiniSectorCutoff); 
+		cfb->header._sectMiniFatStart = bo_32_sw(cfb->header._sectMiniFatStart); 
+		cfb->header._csectMiniFat = bo_32_sw(cfb->header._csectMiniFat); 
+		cfb->header._sectDifStart = bo_32_sw(cfb->header._sectDifStart); 
+		cfb->header._csectDif = bo_32_sw(cfb->header._csectDif); 
 	}
 	
 	/* check signature */
@@ -1083,7 +1020,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 		////copy fat data to array
 		//DWORD ch = cfb->header._sectFat[difat_len];
 		//if (cfb->biteOrder)
-			//ch = CFB_DWORD_SW(ch);		
+			//ch = bo_32_sw(ch);		
 //#ifdef DEBUG
 	//LOG("_cfb_init: set DIFAT[%d] to %d\n", difat_len, ch);
 //#endif
@@ -1125,7 +1062,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 				////fread(&DIFAT[dfat_len++], 4, 1, fp);
 				//fread(&ch, 4, 1, fp);
 				//if (cfb->biteOrder)
-					//ch = CFB_DWORD_SW(ch);		
+					//ch = bo_32_sw(ch);		
 //#ifdef DEBUG
 	//LOG("_cfb_init: set DIFAT[%d] to %x\n", difat_len, ch);
 //#endif				
@@ -1135,7 +1072,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 			////find next
 			//fread(&from, 4, 1, fp);
 			//if (cfb->biteOrder)
-				//from = CFB_DWORD_SW(from);			
+				//from = bo_32_sw(from);			
 		//}
 	//} else {
 //#ifdef DEBUG
@@ -1176,7 +1113,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 				//SECT ch;
 				//fread(&ch, 4, 1, fp);
 				//if (cfb->biteOrder)
-					//ch = CFB_DWORD_SW(ch);			
+					//ch = bo_32_sw(ch);			
 //#ifdef DEBUG
 		//LOG("_cfb_init: set FAT[%d] to %x\n", fat_len, ch);
 //#endif
@@ -1237,7 +1174,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 				//SECT ch;
 				//fread(&ch, 4, 1, fp);
 				//if (cfb->biteOrder)
-					//ch = CFB_DWORD_SW(ch);			
+					//ch = bo_32_sw(ch);			
 //#ifdef DEBUG
 			//LOG("_cfb_init: set mFAT[%d] to %x\n", mfat_len, ch);
 //#endif
