@@ -563,8 +563,12 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 }
 
 SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
+
 	LOG("get next SECT in mFAT chain for: %x\n", sect);
 	int i;
+
+	if (sect > MAXSECT)
+		return ENDOFCHAIN;	
 
 	DWORD ssize = 1 << cfb->header._uMiniSectorShift; //sector size
 	FSINDEX SECTn = ssize/4; // number of sectors in mFAT

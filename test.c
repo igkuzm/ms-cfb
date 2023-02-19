@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 
 	/*printf("SIZE OF FibBase: %ld\n", sizeof(FibBase));*/
 	/*printf("SIZE OF FibRgW97: %ld\n", sizeof(FibRgW97));*/
-	/*int ret = cfb_doc_parse(&cfb, NULL, text_cb);*/
+	int ret = cfb_doc_parse(&cfb, NULL, text_cb);
 
 	//printf("RET: %d\n", ret);
 
