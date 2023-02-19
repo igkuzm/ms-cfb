@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 18.02.2023
+ * Last Modified Date: 19.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -737,7 +737,9 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	cfb->fp   = fp;
 	cfb->biteOrder = false;
 	cfb->fat  = NULL;
+	cfb->fat_len = 0;
 	cfb->mfat = NULL;
+	cfb->mfat_len = 0;
 	
 	//get byte order
 	uint16_t byteOrder;
@@ -864,6 +866,12 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
  * that are allocated to the FAT.
  */
 
+#ifdef DEBUG
+	LOG("_cfb_init: get DIFAT - first 109 in header\n");
+#endif	
+	SECT * DIFAT;
+	DWORD difat_len = 0;
+
 /*
  * double-indirect file allocation table (DIFAT): A structure that is used to locate FAT sectors 
  * in a compound file.
@@ -875,33 +883,38 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
  * sector minus the "Next DIFAT Sector Location" field.
 */	
 
+#ifdef DEBUG
+	LOG("_cfb_init: allocate DIFAT with 109*4\n");
+#endif	
+	DIFAT = (SECT *)malloc(109 * sizeof(SECT));
+	if (!DIFAT)
+		return CFB_ALLOC_ERR;	
+	
+
 /* The DIFAT sectors are linked together by the last field in each DIFAT sector. As an 
  * optimization, the first 109 FAT sectors are represented within the header itself. 
  * No DIFAT sectors are needed in a compound file that is smaller than 6.875 megabytes (MB) for 
  * a 512-byte sector compound file (6.875 MB = (1 header sector + 109 FAT sectors x 128 non-empty
  * entries) × 512 bytes per sector).
  */ 
-	//get all FAT
-	//first 109 FAT are in header
+	//first 109 DIFAT are in header
 #ifdef DEBUG
-	LOG("_cfb_init: get first 109 FAT in header\n");
+	LOG("_cfb_init: get first 109 DIFAT in header\n");
 #endif									 	
 
-	// allocate FAT
-	FAT = (struct FAT *)malloc(sizeof(SECT) * 109);
-	for (fat_len = 0; fat_len < 109; ++fat_len) {
+	for (difat_len = 0; difat_len < 109; ++difat_len) {
 		//copy fat data to array
-		DWORD ch = cfb->header._sectFat[fat_len];
+		DWORD ch = cfb->header._sectFat[difat_len];
 		if (cfb->biteOrder)
 			ch = CFB_DWORD_SW(ch);		
 #ifdef DEBUG
-	LOG("_cfb_init: set FAT[%d] to %d\n", fat_len, ch);
+	LOG("_cfb_init: set DIFAT[%d] to %d\n", difat_len, ch);
 #endif
-		FAT[fat_len].n = ch;
+		DIFAT[difat_len] = ch;
 	}
 	//get other FAT in DIFAT
 #ifdef DEBUG
-	LOG("_cfb_init: get other in DIFAT\n");
+	LOG("_cfb_init: get other DIFAT in file\n");
 #endif
 	//start DIFAT is in header _sectDifStart
 	int j = 0; //dfat counter
@@ -922,13 +935,13 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 			while (nsect-- > 0) {
 				//realloc array
 #ifdef DEBUG
-	LOG("_cfb_init: realloc FAT for size: %ld\n", sizeof(SECT) * (fat_len + 1));
+	LOG("_cfb_init: realloc DIFAT for size: %ld\n", sizeof(SECT) * (fat_len + 1));
 #endif				
-				void *FAT_p = 
-						realloc(FAT, sizeof(struct FAT) * (fat_len + 1));	
-				if (!FAT_p)
+				void *DIFAT_p = 
+						realloc(DIFAT, sizeof(SECT) * (difat_len + 1));	
+				if (!DIFAT_p)
 					break;
-				FAT = (struct FAT *)FAT_p;
+				DIFAT = (SECT *)DIFAT_p;
 
 				//add to array
 				DWORD ch;
@@ -937,9 +950,9 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 				if (cfb->biteOrder)
 					ch = CFB_DWORD_SW(ch);		
 #ifdef DEBUG
-	LOG("_cfb_init: set FAT[%d] to %x\n", fat_len, ch);
+	LOG("_cfb_init: set DIFAT[%d] to %x\n", difat_len, ch);
 #endif				
-				FAT[fat_len++].n = ch;
+				DIFAT[difat_len++] = ch;
 			}
 
 			//find next
@@ -949,7 +962,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 		}
 	} else {
 #ifdef DEBUG
-	LOG("_cfb_init: no DIFAT sectors\n");
+	LOG("_cfb_init: no more DIFAT sectors in file\n");
 #endif
 	}
 
@@ -959,6 +972,46 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
  * that are allocated to the FAT.
  */
 
+#ifdef DEBUG
+	LOG("_cfb_init: read FAT chains from DIFAT\n");
+#endif
+	
+#ifdef DEBUG
+	LOG("_cfb_init: alloc FAT\n", difat_len);
+#endif	
+	FAT = (struct FAT *)malloc(sizeof(SECT));	
+	if (!FAT)
+		return CFB_ALLOC_ERR; 
+
+	for (i = 0; i < difat_len; ++i) {
+		if (DIFAT[i] != FREESECT) {
+#ifdef DEBUG
+	LOG("_cfb_init: realloc FAT with (fat_len * 4) + sector size: %ld\n", (fat_len * 4) + ssize);
+#endif			
+			void *FAT_p = realloc(FAT, fat_len*4 + ssize);
+			if (!FAT_p){
+				error |= CFB_ALLOC_ERR;
+				break;
+			}
+			FAT = (struct FAT *)FAT_p;
+			fseek(fp, (1 + DIFAT[i]) * ssize, SEEK_SET);	
+			for (j = 0; j < ssize/4; ++j) {
+				SECT ch;
+				fread(&ch, 4, 1, fp);
+				if (cfb->biteOrder)
+					ch = CFB_DWORD_SW(ch);			
+#ifdef DEBUG
+		LOG("_cfb_init: set FAT[%d] to %x\n", fat_len, ch);
+#endif
+			FAT[fat_len++].n = ch;
+			}
+		}
+	}
+
+#ifdef DEBUG
+	LOG("_cfb_init: end read FAT chains from DIFAT\n");
+#endif	
+	
 	//set cfb attributes
 	cfb->fat = (SECT *)FAT;
 	cfb->fat_len = fat_len;
@@ -968,7 +1021,8 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
  *  smaller, equal-length sectors, and the sector size that is used for the mini stream is 
  *  specified from the Compound File Header (64 bytes).
  */
-	struct FAT *mFAT; //mini FAT chain array
+	struct FAT *mFAT;    //mini mFAT chain array
+	DWORD mfat_len = 0;  //count of mFAT array 
 
 /*
  * The mini stream is chained within the FAT in exactly the same fashion as any normal stream. 
@@ -984,9 +1038,9 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 		
 		//allocate mFAT chain
 #ifdef DEBUG
-	LOG("_cfb_init: allocate mFAT with size: %u\n", cfb->header._csectMiniFat * mfatsize );
+	LOG("_cfb_init: allocate mFAT: _csectMiniFat * sector size: %ld\n", cfb->header._csectMiniFat * ssize);
 #endif		
-		mFAT = (struct FAT *)malloc(cfb->header._csectMiniFat * mfatsize);
+		mFAT = (struct FAT *)malloc(cfb->header._csectMiniFat * ssize);
 		if (!mFAT)
 			return CFB_ALLOC_ERR;
 
@@ -995,28 +1049,28 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	LOG("_cfb_init: fill mFAT chain mFAT\n");
 #endif		
 		
-		SECT sect = cfb->header._sectMiniFatStart; // start position in mFAT chain
+		SECT start = cfb->header._sectMiniFatStart; // start position in mFAT chain
 #ifdef DEBUG
 	LOG("_cfb_init: start position of mFAT chain: %u\n", cfb->header._sectMiniFatStart);
 #endif										  
-	
-		int mfat_len = 0; //len of mFAT chain array
+		// for each FAT
+		for (i = 0; i < cfb->header._csectMiniFat; ++i) {
+			fseek(fp, (1 + start) * ssize, SEEK_SET);	
+			for (j = 0; j < ssize/4; ++j) {
+				SECT ch;
+				fread(&ch, 4, 1, fp);
+				if (cfb->biteOrder)
+					ch = CFB_DWORD_SW(ch);			
 #ifdef DEBUG
-	LOG("_cfb_init: set mFAT[0] to %x\n", sect);
-#endif		
-		mFAT[mfat_len++].n = sect;
-
-		//do cycle
-		while (sect < DIFSECT) {
-			sect = FAT[sect].n;
-#ifdef DEBUG
-	LOG("_cfb_init: set mFAT[%d] to %x\n", mfat_len, sect);
-#endif				
-			mFAT[mfat_len++].n = sect;
-			if (mfat_len >= cfb->header._csectMiniFat)
+			LOG("_cfb_init: set mFAT[%d] to %x\n", mfat_len, ch);
+#endif
+				FAT[mfat_len++].n = ch;
+			}
+			start = FAT[start].n;
+			if (start == ENDOFCHAIN)
 				break;
 		}
-
+	
 		cfb->mfat = (SECT *)mFAT;
 		cfb->mfat_len = mfat_len;
 
@@ -1030,7 +1084,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 		cfb_get_dir_by_sid(cfb, &cfb->root, 0);
 	
 		ULONG s = cfb->root._ulSize;    // size of stream
-		SECT  p = cfb->root._sectStart; // start position in FAT chain
+		p = cfb->root._sectStart; // start position in FAT chain
 
 #ifdef DEBUG
 	LOG("cfb_init: ministream size: %d\n", s);
@@ -1043,19 +1097,16 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	//copy data
 	DWORD len = 0;
 	while (p != ENDOFCHAIN && len < s) {
-		if (p < FATSECT)
-			fseek(cfb->fp, (p + 1)* ssize, SEEK_SET);
+		fseek(cfb->fp, (p + 1)* ssize, SEEK_SET);
 		char buf[ssize];
 		fread (buf, ssize, 1, cfb->fp);
 		fwrite(buf, ssize, 1, stream );
 		len += ssize;
 		// get next FAT
-		if (p < FATSECT){
 #ifdef DEBUG
 	LOG("_cfb_init: next FAT sector in mini stream: %x\n", FAT[p].n);
 #endif
-			p = FAT[p].n;
-		}
+		p = FAT[p].n;
 	}
 
 	cfb->ministream = stream;
