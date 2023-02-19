@@ -2,7 +2,7 @@
  * File              : test.c
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 18.02.2023
+ * Last Modified Date: 19.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -154,9 +154,15 @@ int main(int argc, char *argv[])
 	/*if (!doc)*/
 		/*printf("Can't open WordDocument\n");*/
 
+	/*fseek(doc, 0, SEEK_SET);*/
+	/*int ch = fgetc(doc);*/
+	/*while (ch != EOF) {*/
+		/*printf("%x ", ch);*/
+	/*}*/
+
 	/*printf("SIZE OF FibBase: %ld\n", sizeof(FibBase));*/
 	/*printf("SIZE OF FibRgW97: %ld\n", sizeof(FibRgW97));*/
-	int ret = cfb_doc_parse(&cfb, NULL, text_cb);
+	/*int ret = cfb_doc_parse(&cfb, NULL, text_cb);*/
 
 	//printf("RET: %d\n", ret);
 
