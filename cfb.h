@@ -984,7 +984,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 		return CFB_ALLOC_ERR; 
 
 	for (i = 0; i < difat_len; ++i) {
-		if (DIFAT[i] != FREESECT) {
+		//if (DIFAT[i] != FREESECT) {
 #ifdef DEBUG
 	LOG("_cfb_init: realloc FAT with (fat_len * 4) + sector size: %ld\n", (fat_len * 4) + ssize);
 #endif			
@@ -1005,7 +1005,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 #endif
 			FAT[fat_len++].n = ch;
 			}
-		}
+		//}
 	}
 
 #ifdef DEBUG
