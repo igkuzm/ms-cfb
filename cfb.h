@@ -570,19 +570,17 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	cfb_dir_name(dir, dirname);	
 	LOG("start cfb_get_stream_by_dir with dirname: %s\n", dirname);
 #endif
+
 	ULONG s = dir->_ulSize;    //size of stream
+
 #ifdef DEBUG
 	LOG("cfb_get_stream_by_dir: stream size: %ld\n", s);
 #endif
-	SECT  p = dir->_sectStart; // start position in FAT/miniFAT chain
+	SECT  sect = dir->_sectStart; // start position in FAT/miniFAT chain
 	
 	DWORD ssize;  //sector size	
-	DWORD sstart; //start for sectors - 0 for MFAT, ssize for FAT; 
-
-	DWORD off;    //offset
-	
-	FILE * fp;    // file pointer
-	
+	DWORD sstart; //start for sectors - 0 for mFAT, ssize for FAT; 
+	FILE * fp;    // file pointer - ministream for mFAT, main stream for FAT
 	SECT (*get_next_sect)(SECT sect, struct cfb * cfb); // get next sect function
 	
 	//check FAT or miniFAT
@@ -610,11 +608,11 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 		get_next_sect = _cfb_next_sect_in_FAT_chain;
 	} 
 	
-	off = p * ssize + sstart;
+	DWORD off = sect * ssize + sstart; //offset
 	
 #ifdef DEBUG
 	LOG("cfb_get_stream_by_dir: sectorsize: %d\n", ssize);
-	LOG("cfb_get_stream_by_dir: offset: %d\n", off);
+	LOG("cfb_get_stream_by_dir: offset: %d\n"    , off  );
 #endif				
 	
 	//seek to start offset
@@ -624,13 +622,13 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	FILE * stream = tmpfile();
 
 	//copy data
-	while (p != ENDOFCHAIN) {
+	while (sect != ENDOFCHAIN) {
 		char buf[ssize];
 		fread (buf, ssize, 1, fp);
 		fwrite(buf, ssize, 1, stream );
 		
 		// get next FAT/miniFAT
-		p = get_next_sect(p, cfb);
+		sect = get_next_sect(sect, cfb);
 	}
 
 	fseek(stream, 0, SEEK_SET);

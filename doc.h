@@ -2909,7 +2909,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 #ifdef DEBUG
 	LOG("_clx_init: first bite of CLX: %x\n", ch);
 #endif
-	
+
 	if (ch == 0x01){ //we have RgPrc (Prc array)
 #ifdef DEBUG
 	LOG("_clx_init: we have RgPrc (Prc array)\n");
@@ -3005,81 +3005,6 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	return 0;
 }
 
-//int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
-	//clx->RgPrc = malloc(sizeof(struct Prc));
-	//if (!clx->RgPrc)
-		//return DOC_ERR_ALLOC;		
-	
-	//clx->Pcdt = malloc(sizeof(struct Pcdt));
-	//if (!clx->Pcdt)
-		//return DOC_ERR_ALLOC;		
-
-	//struct PlcPcd PlcPcd;
-	
-	////get first byte
-	//fseek(doc->Table, fcClx, SEEK_SET);
-	//uint8_t ch;
-	//fread(&ch, 1, 1, doc->Table);
-	//if (ch == 0x01){ //we have Prc array
-		////read cbGrpprl.
-		//uint16_t cbGrpprl;
-		//if (fread(&cbGrpprl, 2, 1, doc->Table) != 1)
-			//return DOC_ERR_FILE;
-/*
- * cbGrpprl specifies the size of GrpPrl, in bytes. 
- * This value MUST be less than or equal to 0x3FA2
-*/
-		//if (cbGrpprl > 0x3FA2) //error
-			//return DOC_ERR_FILE;
-		//struct Prl *GrpPrl = malloc(cbGrpprl);
-		//if (!GrpPrl)
-			//return DOC_ERR_ALLOC;		
-		////read GrpPrl 
-		//if (fread(GrpPrl, cbGrpprl, 1, doc->Table) != 1)
-			//return DOC_ERR_FILE;
-		
-		//clx->RgPrc->clxt = ch;
-		//clx->RgPrc->data = malloc(sizeof(struct PrcData));
-		//if (!clx->RgPrc->data)
-			//return DOC_ERR_ALLOC;		
-		//clx->RgPrc->data->cbGrpprl = cbGrpprl;
-		//clx->RgPrc->data->GrpPrl = GrpPrl;
-		
-		////check clx->Pcdt->clxt
-		//if (fread(&(clx->Pcdt->clxt), 1, 1, doc->Table) != 1)
-			//return DOC_ERR_FILE;
-		//if (clx->Pcdt->clxt != 0x02) //error
-			//return DOC_ERR_FILE;
-		
-		////read Pcdt->PlcPcd		
-		//_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx - cbGrpprl, doc);
-	//} 
-	//else 
-		//if (ch == 0x02){ //we have Pcdt only
-			//clx->Pcdt->clxt = ch;
-			////read lcb;
-			//fread(&(clx->Pcdt->lcb), 4, 1, doc->Table);
-			
-			//if (clx->Pcdt->lcb == lcbClx-5)
-				////read Plc piecies
-				//_plcpcd_init(&(clx->Pcdt->PlcPcd), lcbClx-5, doc);
-			//else 
-				//goto cycle;
-		//} 
-		//else { //error?
-			//goto cycle;
-	//}
-
-	//return 0;
-
-	//cycle:;
-	//free(clx->RgPrc);
-	//free(clx->Pcdt);
-	//_clx_init(clx, ++fcClx, --lcbClx, doc);		  
-	
-	//return 0;
-//} 
-
 int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 #ifdef DEBUG
 	LOG("start cfb_doc_init\n");
@@ -3111,10 +3036,14 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc->fib.rgFcLcb);
 	//FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx
 	uint32_t fcClx = rgFcLcb97->fcClx;
-	/*printf("fcClx: %d\n", fcClx);*/
+#ifdef DEBUG
+	LOG("fcClx: %d\n", fcClx);
+#endif
 	//FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx
 	uint32_t lcbClx = rgFcLcb97->lcbClx;
-	/*printf("lcbClx: %d\n", lcbClx);*/
+#ifdef DEBUG
+	LOG("lcbClx: %d\n", lcbClx);
+#endif	
 
 	//Read the Clx from the Table Stream
 	ret = _clx_init(&(doc->clx), rgFcLcb97->fcClx, rgFcLcb97->lcbClx, doc);
