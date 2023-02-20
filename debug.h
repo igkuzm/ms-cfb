@@ -2,7 +2,7 @@
  * File              : debug.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 07.11.2022
- * Last Modified Date: 17.02.2023
+ * Last Modified Date: 20.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -41,28 +41,6 @@ void print_cfb_header(struct cfb * cfb){
 	printf("_csectMiniFat: %u\n", cfb->header._csectMiniFat);
 	printf("_sectDifStart: 0x%x\n", cfb->header._sectDifStart);
 	printf("_csectDif: %u\n", cfb->header._csectDif);
-	printf("********************************************\n");
-}
-
-void print_fat_stream(struct cfb * cfb){
-	int i;
-	printf("********************************************\n");
-	printf("FAT...\n");
-	printf("********************************************\n");	
-	for (i = 0; i < cfb->header._csectFat; ++i) 
-		printf("%x ", cfb->fat[i]);	
-	printf("\n");
-	printf("********************************************\n");
-}
-
-void print_mfat_stream(struct cfb * cfb){
-	int i;
-	printf("********************************************\n");
-	printf("miniFAT...\n");
-	printf("********************************************\n");	
-	for (i = 0; i < cfb->header._csectMiniFat; ++i) 
-		printf("%x ", cfb->mfat[i]);	
-	printf("\n");
 	printf("********************************************\n");
 }
 
