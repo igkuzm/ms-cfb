@@ -889,7 +889,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 
 	if (cfb->header._csectMiniFat > 0){
 #ifdef DEBUG
-	LOG("Get miniFAT stream\n");
+	LOG("_cfb_init: get mini stream\n");
 #endif									 
 /*
  * The mini stream is chained within the FAT in exactly the same fashion as any normal stream. 
@@ -900,24 +900,33 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 
 		DWORD ssize = 1 << cfb->header._uSectorShift; // sector size
 		SECT sect = cfb->root._sectStart; // start sector
-	
-		DWORD off = sect * ssize + ssize; // offset
-	
-		//seek to start offset
-		fseek(fp, off, SEEK_SET);
+#ifdef DEBUG
+	LOG("_cfb_init: mini stream start sector: %x\n", cfb->root._sectStart);
+#endif										  
 	
 		//create stream
 		cfb->ministream = tmpfile();
 
+		DWORD off = sect * ssize + ssize; // offset
+		
 		//copy data
-		while (p != ENDOFCHAIN) {
+		while (sect != ENDOFCHAIN) {
+			// seek to offset
+			fseek(fp, off, SEEK_SET);
+	
+			// read/write data
 			char buf[ssize];
 			fread (buf, ssize, 1, fp);
 			fwrite(buf, ssize, 1, cfb->ministream );
 			
-			// get next FAT/miniFAT
-			p = _cfb_next_sect_in_FAT_chain(p, cfb);
+			// get next FAT
+			sect = _cfb_next_sect_in_FAT_chain(sect, cfb);
+			
+			// next offset
+			off = sect * ssize + ssize;
 		}
+
+		// seek stream to start
 		fseek(cfb->ministream, 0, SEEK_SET);
 		
 	} else {
