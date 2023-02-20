@@ -599,7 +599,7 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	ULONG s = dir->_ulSize;    //size of stream
 
 #ifdef DEBUG
-	LOG("cfb_get_stream_by_dir: stream size: %ld\n", s);
+	LOG("cfb_get_stream_by_dir: stream size: %u\n", s);
 #endif
 	SECT  sect = dir->_sectStart; // start position in FAT/miniFAT chain
 	
@@ -637,20 +637,24 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	LOG("cfb_get_stream_by_dir: offset: %d\n"    , off  );
 #endif				
 	
-	//seek to start offset
-	fseek(fp, off, SEEK_SET);
-
 	//create stream
 	FILE * stream = tmpfile();
 
 	//copy data
 	while (sect != ENDOFCHAIN) {
+		// seek to start offset
+		fseek(fp, off, SEEK_SET);
+
+		// read/write data
 		char buf[ssize];
 		fread (buf, ssize, 1, fp);
 		fwrite(buf, ssize, 1, stream );
 		
 		// get next FAT/miniFAT
 		sect = get_next_sect(sect, cfb);
+
+		// get next offset 
+		off = sect * ssize + sstart;
 	}
 
 	fseek(stream, 0, SEEK_SET);

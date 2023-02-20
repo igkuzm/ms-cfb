@@ -2781,9 +2781,6 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 };
 
 FILE *_table_stream(cfb_doc_t *doc, struct cfb *cfb){
-#ifdef DEBUG
-	LOG("start _table_stream\n");
-#endif	
 	char *table = "0Table";
 	Fib *fib = &doc[0].fib;
 	if (FibBaseG(fib[0].base))
