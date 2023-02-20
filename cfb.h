@@ -888,7 +888,9 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	}
 
 	if (cfb->header._csectMiniFat > 0){
-		LOG("Get miniFAT stream\n");
+#ifdef DEBUG
+	LOG("Get miniFAT stream\n");
+#endif									 
 /*
  * The mini stream is chained within the FAT in exactly the same fashion as any normal stream. 
  * The mini stream's starting sector is referenced in the first directory entry (root storage 
