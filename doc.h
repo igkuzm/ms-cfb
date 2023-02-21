@@ -2700,7 +2700,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}
 	
 #ifdef DEBUG
-	LOG("cbRgFcLcb: 0x%x\n", fib.cbRgFcLcb);
+	LOG("cbRgFcLcb: 0x%x\n", fib->cbRgFcLcb);
 #endif	
 
 #ifdef DEBUG
@@ -2740,7 +2740,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	fread(&(fib->cswNew), 2, 1, fp);
 
 #ifdef DEBUG
-	LOG("cswNew: 0x%x\n", fib.cswNew);
+	LOG("cswNew: 0x%x\n", fib->cswNew);
 #endif	
 	if (cfb->biteOrder){
 		fib->cswNew = bo_16_sw(fib->cswNew);
@@ -3297,7 +3297,7 @@ int cfb_doc_parse(
 		return ret;
 
 	//get text
-	_get_text_for_cp(&doc, &(doc.clx.Pcdt->PlcPcd), 0, doc->fib.rgLw97->ccpText, user_data, text);
+	_get_text_for_cp(&doc, &(doc.clx.Pcdt->PlcPcd), 0, doc.fib.rgLw97->ccpText, user_data, text);
 
 #ifdef DEBUG
 	LOG("cfb_doc_parse done\n");
