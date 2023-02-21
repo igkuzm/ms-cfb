@@ -3303,7 +3303,8 @@ int cfb_doc_parse(
 		return ret;
 
 	//get text
-	_get_text_for_cp(&doc, &(doc.clx.Pcdt->PlcPcd), 0, doc.fib.rgLw97->ccpText, user_data, text);
+	//_get_text_for_cp(&doc, &(doc.clx.Pcdt->PlcPcd), 0, doc.fib.rgLw97->ccpText, user_data, text);
+	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd), user_data, text);
 
 #ifdef DEBUG
 	LOG("cfb_doc_parse done\n");
