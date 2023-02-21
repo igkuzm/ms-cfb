@@ -3128,18 +3128,16 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 	}
 }
 
-void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t start_cp, uint32_t end_cp,
+static void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t cp, uint32_t len,
 		void *user_data,
 		int (*text)(
 			void *user_data,
 			char *str
 			)		
 		){
-	// get char for each CP
-	// CPs are in range in aCp
-	int i; //aCp iterator
-	uint32_t cp; //CP (char position)
-	for (cp=start_cp; cp < end_cp; cp++){
+	
+	int i, l=0; //iterator
+	while (l++ < len){
 
 /*
  * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
@@ -3150,7 +3148,7 @@ void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t start_cp, 
  */
 		for (i = 0; i < PlcPcd->aPcdl; ++i) {
 			if (PlcPcd->aCp[i] > cp) {
-				i--;
+				--i;
 				break;
 			}	
 		}
@@ -3194,6 +3192,9 @@ void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t start_cp, 
 			_utf16_to_utf8(&u, 1, utf8);
 			text(user_data, utf8);
 		}
+
+		// iterate
+		cp++;
 	}
 }
 
