@@ -589,8 +589,7 @@ static int cfb_dir_name(cfb_dir * dir, char * name){
 	return 0;
 }
 
-static FILE * 
-cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir, bool isRoot) {
+FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 #ifdef DEBUG
 	char dirname[BUFSIZ];
 	cfb_dir_name(dir, dirname);	
@@ -610,9 +609,9 @@ cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir, bool isRoot) {
 	SECT (*get_next_sect)(SECT sect, struct cfb * cfb); // get next sect function
 	
 	//check FAT or miniFAT
-	//miniFAT is when size < 4096
-	//root entry is always FAT
-	if (s < cfb->header._ulMiniSectorCutoff && !isRoot){
+	//use miniFAT is size < 4096
+	//for root always use FAT
+	if (s < cfb->header._ulMiniSectorCutoff && dir->_mse != STGTY_ROOT){
 #ifdef DEBUG
 	LOG("cfb_get_stream_by_dir: stream is minifat\n");
 #endif		
@@ -664,8 +663,7 @@ cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir, bool isRoot) {
 	return stream;	
 }
 
-static int 
-cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
+int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 	int i;
@@ -692,20 +690,17 @@ cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
 	return 0;
 }
 
-static int 
-cfb_dir_callback(void * user_data, cfb_dir dir){
+static int cfb_dir_callback(void * user_data, cfb_dir dir){
 	cfb_dir * _dir = (cfb_dir *)user_data;
 	*_dir = dir;
 	return 0;
 }
 
-static int 
-cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
+static int cfb_get_dir_by_sid(struct cfb * cfb, cfb_dir * dir, SID sid){
 	return cfb_dir_by_sid(cfb, sid, dir, cfb_dir_callback);
 }
 
-static int 
-_cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
+static int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_data,
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 #ifdef DEBUG
@@ -748,8 +743,7 @@ _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void * user_dat
 	}
 	return 0;
 }
-static int 
-cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
+static int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 #ifdef DEBUG
@@ -761,8 +755,7 @@ cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data,
 	return _cfb_dir_find(cfb, &dir, name, user_data, callback);
 }
 
-static int 
-cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
+static int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
 #ifdef DEBUG
 	LOG("start cfb_get_dir_by_name: %s\n", name);
 #endif		
@@ -779,18 +772,10 @@ static FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
 	if (cfb_get_dir_by_sid(cfb, &dir, sid))
 		return NULL; //no dir
 	
-	return cfb_get_stream_by_dir(cfb, &dir, sid == 0);
+	return cfb_get_stream_by_dir(cfb, &dir);
 };
 
-static FILE *
-cfb_get_stream_by_dir_check_root(struct cfb * cfb, cfb_dir * dir){
-	char name[BUFSIZ];
-	cfb_dir_name(dir, name);	
-	return cfb_get_stream_by_dir(cfb, dir, strncmp(name, "R", 1) == 0);
-}
-
-static FILE * 
-cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
+static FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
 #ifdef DEBUG
 	LOG("start cfb_get_stream_by_name for dir: %s\n", name);
 #endif		
@@ -799,18 +784,17 @@ cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
 	if (cfb_get_dir_by_name(cfb, &dir, name))
 		return NULL; //no dir
 	
-	return cfb_get_stream_by_dir(cfb, &dir, strncmp(name, "R", 1) == 0);
+	return cfb_get_stream_by_dir(cfb, &dir);
 }
 
 #define cfb_get_stream(cfb, arg)\
 	_Generic((arg), \
 			char*:       cfb_get_stream_by_name, \
 			int:         cfb_get_stream_by_sid, \
-			cfb_dir *:   cfb_get_stream_by_dir_check_root \
+			cfb_dir *:   cfb_get_stream_by_dir \
 	)((cfb), (arg))	
 
-static int 
-_cfb_init(struct cfb * cfb, FILE *fp){
+static int _cfb_init(struct cfb * cfb, FILE *fp){
 #ifdef DEBUG
 	LOG("start _cfb_init\n");
 #endif
@@ -914,7 +898,9 @@ _cfb_init(struct cfb * cfb, FILE *fp){
  * The mini stream's starting sector is referenced in the first directory entry (root storage 
  * stream ID 0).
  */	
-		cfb->ministream = cfb_get_stream_by_sid(cfb, 0);
+		cfb_get_dir_by_sid(cfb, &(cfb->root), 0);
+		cfb->ministream = cfb_get_stream_by_dir(cfb, &(cfb->root));
+
 	} else {
 		LOG("No miniFAT stream in file\n");
 	}
