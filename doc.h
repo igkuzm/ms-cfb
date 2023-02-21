@@ -21,6 +21,8 @@ extern "C"{
 
 #include "cfb.h"
 
+#define TXT(...) ({char c[1024]; snprintf(c, 1023, __VA_ARGS__); c[1023]=0; c;})
+
 /*
  * [MS-DOC]: Word (.doc) Binary File Format
  * Specifies the Word (.doc) Binary File Format, which is the binary file format used by Microsoft 
@@ -3136,13 +3138,36 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 						text(user_data, c);
 					} else {
 						//this is a mark
+
+			/* Following symbols below 32 are allowed inside paragraph:
+			   0x0002 - footnote mark
+			   0x0007 - table separator (converted to tabmode)
+			   0x0009 - Horizontal tab ( printed as is)
+			   0x000B - hard return
+			   0x000C - page break
+			   0x000D - return - marks an end of paragraph
+			   0x001E - IS2 for some reason means short defis in Word.
+			   0x001F - soft hyphen in Word
+			   0x0013 - start embedded hyperlink
+			   0x0014 - separate hyperlink URL from text
+			   0x0015 - end embedded hyperlink
+			   */
+
 						switch (u) {
-							case 0x0D: case 0x07: text(user_data, "\n"); break;
+							case 0x0D: text(user_data, "\n"); break;
+							case 0x07: text(user_data, "\n"); break;
+							case 0x1E: text(user_data, "-"); break;
+							case 0x09: text(user_data, "\t"); break;
+							case 0x13: text(user_data, " "); break;
+							case 0x15: text(user_data, " "); break;
+							case 0x0C: text(user_data, TXT("%c", u)); break;
+							case 0x1F: text(user_data, TXT("%x", 0xAD)); break;
+							case 0x0B: text(user_data, TXT("%x", 0x0A)); break;
 							case 0x08: case 0x01: text(user_data, ""); break;
 							default: break;
 						}
 					}
-				} else {
+			  } else if (u != 0xfeff) {
 					char utf8[4]={0};
 					_utf16_to_utf8(&u, 1, utf8);
 					text(user_data, utf8);
