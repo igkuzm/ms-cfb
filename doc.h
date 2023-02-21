@@ -2699,7 +2699,9 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		fib->cbRgFcLcb = bo_16_sw(fib->cbRgFcLcb);
 	}
 	
-	/*printf("cbRgFcLcb: 0x%x\n", fib.cbRgFcLcb);*/
+#ifdef DEBUG
+	LOG("cbRgFcLcb: 0x%x\n", fib.cbRgFcLcb);
+#endif	
 
 #ifdef DEBUG
 	LOG("_cfb_doc_fib_init: allocate FibRgLw97 with size: %d\n", fib->cbRgFcLcb*8);
@@ -2736,7 +2738,10 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 #endif	
 	//read Fib.cswNew
 	fread(&(fib->cswNew), 2, 1, fp);
-	/*printf("cswNew: 0x%x\n", fib.cswNew);*/
+
+#ifdef DEBUG
+	LOG("cswNew: 0x%x\n", fib.cswNew);
+#endif	
 	if (cfb->biteOrder){
 		fib->cswNew = bo_16_sw(fib->cswNew);
 	}
@@ -3123,6 +3128,75 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 	}
 }
 
+void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t start_cp, uint32_t end_cp,
+		void *user_data,
+		int (*text)(
+			void *user_data,
+			char *str
+			)		
+		){
+	// get char for each CP
+	// CPs are in range in aCp
+	int i; //aCp iterator
+	uint32_t cp; //CP (char position)
+	for (cp=start_cp; cp < end_cp; cp++){
+
+/*
+ * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
+ * PlcPcd.aCp[i] ≤ cp. As with all Plcs, the elements of PlcPcd.aCp are sorted in ascending order.
+ * Recall from the definition of a Plc that the aCp array has one more element than the aPcd array.
+ * Thus, if the last element of PlcPcd.aCp is less than or equal to cp, cp is outside the range of
+ * valid character positions in this document
+ */
+		for (i = 0; i < PlcPcd->aPcdl; ++i) {
+			if (PlcPcd->aCp[i] > cp) {
+				i--;
+				break;
+			}	
+		}
+		
+/*
+ * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
+ * WordDocument Stream of the text at character position PlcPcd.aCp[i].
+ */
+		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
+		if (FcCompressed(fc)){
+/*
+ * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
+ * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
+ * one of the special values in the table defined in the description of FcCompressed.fc. This is 
+ * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
+ * in the WordDocument Stream and each character occupies one byte.
+ */			
+			//ANSI
+			DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
+			fseek(doc->WordDocument, off, SEEK_SET);	
+			char c[2] = {0};
+			fread(c, 1, 1, doc->WordDocument);			
+			text(user_data, c);
+
+		} else {
+/*
+ * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
+ * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
+ * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
+ * WordDocument Stream and each character occupies two bytes.
+ */			
+			//UNICODE 16
+			DWORD off = FcValue(fc) + 2*(cp - PlcPcd->aCp[i]);
+			fseek(doc->WordDocument, off, SEEK_SET);	
+			WORD u;
+			fread(&u, 2, 1, doc->WordDocument);
+			if (doc->byteOrder){
+				u = bo_16_sw(u);
+			}
+			char utf8[4]={0};
+			_utf16_to_utf8(&u, 1, utf8);
+			text(user_data, utf8);
+		}
+	}
+}
+
 /*
  * Retrieving Text
  * The following algorithm specifies how to find the text at a particular character position 
@@ -3223,7 +3297,7 @@ int cfb_doc_parse(
 		return ret;
 
 	//get text
-	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd), user_data, text);
+	_get_text_for_cp(&doc, &(doc.clx.Pcdt->PlcPcd), 0, doc->fib.rgLw97->ccpText, user_data, text);
 
 #ifdef DEBUG
 	LOG("cfb_doc_parse done\n");
@@ -3249,3 +3323,5 @@ void cfb_doc_main_document(struct cfb *cfb){
 #endif
 
 #endif //DOC_H_
+
+// vim:ft=c	

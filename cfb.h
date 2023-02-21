@@ -331,7 +331,7 @@ enum {
  * IMP
  */
 
-void _cfb_dir_sw(cfb_dir * dir){
+static void _cfb_dir_sw(cfb_dir * dir){
 	
 	dir->_cb = bo_16_sw(dir->_cb);
 	
@@ -356,7 +356,7 @@ void _cfb_dir_sw(cfb_dir * dir){
 }
 
 //return len of utf8 string
-size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
+static size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
 	int i, k = 0;
 	for (i = 0; i < len; ++i) {
 		WORD wc = utf16[i];
@@ -391,14 +391,14 @@ size_t _utf16_to_utf8(WORD * utf16, int len, char * utf8){
  *(free). The FAT is a sector chain that is made up of one or more FAT sectors.
  */
 
-SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
+static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 /*
  * The FAT is an array of sector numbers that represent the allocation of space within the 
  * file, grouped into FAT sectors. Each stream is represented in the FAT by a sector chain, 
  * in much the same fashion as a FAT file system.
  */	
 #ifdef DEBUG
-	LOG("get next SECT in FAT chain for: %x:\t", sect);
+	LOG("get next SECT in FAT chain for: 0x%x:\t", sect);
 #endif		
 	int i;
 
@@ -434,7 +434,7 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		SECT ch;
 		if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read SECT from offset: %x\n", off);
+	LOG("Error to read SECT from offset: %u\n", off);
 #endif		
 			return ENDOFCHAIN;
 		};
@@ -442,7 +442,7 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 			ch = bo_32_sw(ch);		
 
 #ifdef DEBUG
-	LOG("%x\n", ch);
+	LOG("0x%x\n", ch);
 #endif		
 		return ch;
 
@@ -477,7 +477,7 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		SECT ch;
 		if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read DIFAT from offset: %x\n", off);
+	LOG("Error to read DIFAT from offset: %u\n", off);
 #endif		
 			return ENDOFCHAIN;
 		};
@@ -492,7 +492,7 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 	SECT ch;
 	if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read FAT from offset: %x\n", off);
+	LOG("Error to read FAT from offset: %u\n", off);
 #endif		
 		return ENDOFCHAIN;
 	};
@@ -506,19 +506,19 @@ SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 	fseek(cfb->fp, off, SEEK_SET);
 	if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read SECT from offset: %x\n", off);
+	LOG("Error to read SECT from offset: %u\n", off);
 #endif		
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
 		ch = bo_32_sw(ch);
 #ifdef DEBUG
-	LOG("%x\n", ch);
+	LOG("0x%x\n", ch);
 #endif		
 	return ch;	
 }
 
-SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
+static SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
 /*
  *  The mini FAT is used to allocate space in the mini stream. The mini stream is divided into
  *  smaller, equal-length sectors, and the sector size that is used for the mini stream is 
@@ -526,7 +526,7 @@ SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
  */	
 
 #ifdef DEBUG
-	LOG("get next SECT in mFAT chain for: %x:\t", sect);
+	LOG("get next SECT in mFAT chain for: 0x%x:\t", sect);
 #endif		
 	int i;
 
@@ -558,14 +558,14 @@ SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
 	SECT ch;
 	if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read SECT from offset: %x\n", off);
+	LOG("Error to read SECT from offset: %u\n", off);
 #endif		
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
 		ch = bo_32_sw(ch);
 #ifdef DEBUG
-	LOG("%x\n", ch);
+	LOG("0x%x\n", ch);
 #endif		
 	return ch;	
 }
@@ -589,7 +589,7 @@ static int cfb_dir_name(cfb_dir * dir, char * name){
 	return 0;
 }
 
-FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
+static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 #ifdef DEBUG
 	char dirname[BUFSIZ];
 	cfb_dir_name(dir, dirname);	
@@ -602,7 +602,10 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	LOG("cfb_get_stream_by_dir: stream size: %u\n", s);
 #endif
 	SECT  sect = dir->_sectStart; // start position in FAT/miniFAT chain
-	
+#ifdef DEBUG
+	LOG("cfb_get_stream_by_dir: stream start sector: 0x%x\n", dir->_sectStart);
+#endif
+
 	DWORD ssize;  //sector size	
 	DWORD sstart; //start for sectors - 0 for mFAT, ssize for FAT; 
 	FILE * fp;    // file pointer - ministream for mFAT, main stream for FAT
@@ -663,7 +666,7 @@ FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	return stream;	
 }
 
-int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
+static int cfb_dir_by_sid(struct cfb * cfb, SID sid, void * user_data,
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 	int i;
