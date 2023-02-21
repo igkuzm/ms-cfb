@@ -3053,7 +3053,7 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 #endif	
 
 	//Read the Clx from the Table Stream
-	ret = _clx_init(&(doc->clx), rgFcLcb97->fcClx, rgFcLcb97->lcbClx, doc);
+	ret = _clx_init(&(doc->clx), fcClx, lcbClx, doc);
 	if (ret)
 		return ret;	
 
