@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 20.02.2023
+ * Last Modified Date: 21.02.2023
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -2579,7 +2579,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	
 	//check wIdent
 #ifdef DEBUG
-	LOG("_cfb_doc_fib_init: check wIdent: %x\n", fib->base->wIdent);
+	LOG("_cfb_doc_fib_init: check wIdent: 0x%x\n", fib->base->wIdent);
 #endif	
 	if (fib->base->wIdent != 0xA5EC){
 		free(fib->base);
@@ -2600,7 +2600,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 
 	//check csw
 #ifdef DEBUG
-	LOG("_cfb_doc_fib_init: check csw: %x\n", fib->csw);
+	LOG("_cfb_doc_fib_init: check csw: 0x%x\n", fib->csw);
 #endif		
 	if (fib->csw != 14) {
 		free(fib->base);
@@ -2644,7 +2644,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	}
 
 #ifdef DEBUG
-	LOG("_cfb_doc_fib_init: check cslw: %x\n", fib->cslw);
+	LOG("_cfb_doc_fib_init: check cslw: 0x%x\n", fib->cslw);
 #endif	
 	//check cslw
 	if (fib->cslw != 22) {
@@ -2699,7 +2699,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		fib->cbRgFcLcb = bo_16_sw(fib->cbRgFcLcb);
 	}
 	
-	/*printf("cbRgFcLcb: %x\n", fib.cbRgFcLcb);*/
+	/*printf("cbRgFcLcb: 0x%x\n", fib.cbRgFcLcb);*/
 
 #ifdef DEBUG
 	LOG("_cfb_doc_fib_init: allocate FibRgLw97 with size: %d\n", fib->cbRgFcLcb*8);
@@ -2736,7 +2736,7 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 #endif	
 	//read Fib.cswNew
 	fread(&(fib->cswNew), 2, 1, fp);
-	/*printf("cswNew: %x\n", fib.cswNew);*/
+	/*printf("cswNew: 0x%x\n", fib.cswNew);*/
 	if (cfb->biteOrder){
 		fib->cswNew = bo_16_sw(fib->cswNew);
 	}
@@ -2883,7 +2883,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	}
 
 #ifdef DEBUG
-	LOG("_plcpcd_init: PlcPcd->aPcd[%d]: ABCfR2: %x, FC: %x, PRM: %x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
+	LOG("_plcpcd_init: PlcPcd->aPcd[%d]: ABCfR2: 0x%x, FC: 0x%x, PRM: 0x%x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
 #endif	
 	
 #ifdef DEBUG
@@ -2904,7 +2904,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	fseek(doc->Table, fcClx, SEEK_SET);
 	fread(&ch, 1, 1, doc->Table);
 #ifdef DEBUG
-	LOG("_clx_init: first bite of CLX: %x\n", ch);
+	LOG("_clx_init: first bite of CLX: 0x%x\n", ch);
 #endif
 
 	if (ch == 0x01){ //we have RgPrc (Prc array)
@@ -2925,7 +2925,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 			cbGrpprl = bo_16_sw(cbGrpprl);
 		}
 #ifdef DEBUG
-	LOG("_clx_init: the first 2 bite of PrcData is cbGrpprl: %x\n", cbGrpprl);
+	LOG("_clx_init: the first 2 bite of PrcData is cbGrpprl: 0x%x\n", cbGrpprl);
 #endif		
 		if (cbGrpprl > 0x3FA2) //error
 			return DOC_ERR_FILE;		
@@ -2942,7 +2942,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 		//allocate GrpPrl
 #ifdef DEBUG
-	LOG("_clx_init: allocate GrpPrl with size: %x\n", cbGrpprl);
+	LOG("_clx_init: allocate GrpPrl with size: 0x%x\n", cbGrpprl);
 #endif		
 		clx->RgPrc->data->GrpPrl = malloc(cbGrpprl);
 		if (!clx->RgPrc->data->GrpPrl)
@@ -2957,7 +2957,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 		//read ch again
 #ifdef DEBUG
-	LOG("_clx_init: again first bite of CLX: %x\n", ch);
+	LOG("_clx_init: again first bite of CLX: 0x%x\n", ch);
 #endif		
 		fread(&ch, 1, 1, doc->Table);
 	}	
@@ -2973,7 +2973,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	//read Pcdt->clxt - this must be 0x02
 	clx->Pcdt->clxt = ch;
 #ifdef DEBUG
-	LOG("_clx_init: Pcdt->clxt: %x\n", clx->Pcdt->clxt);
+	LOG("_clx_init: Pcdt->clxt: 0x%x\n", clx->Pcdt->clxt);
 #endif	
 	if (clx->Pcdt->clxt != 0x02) { //some error
 		return DOC_ERR_FILE;		
