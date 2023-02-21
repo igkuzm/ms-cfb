@@ -2840,9 +2840,9 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 		if (doc->byteOrder){
 			ch = bo_32_sw(ch);
 		}
-		PlcPcd->aCp[i++] = ch;
+		PlcPcd->aCp[i] = ch;
 #ifdef DEBUG
-	LOG("_plcpcd_init: aCp[%d]: %u\n", PlcPcd->aCp[i], ch);
+	LOG("_plcpcd_init: aCp[%d]: %u\n", i, PlcPcd->aCp[i]);
 #endif		
 		if (ch == lastCp)
 			break;
@@ -2855,6 +2855,8 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 		if(!ptr)
 			break;
 		PlcPcd->aCp = ptr;
+		//iterate
+		i++;
 	}
 #ifdef DEBUG
 	LOG("_plcpcd_init: number of cp in array: %d\n", i);
@@ -3125,9 +3127,26 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 				if (doc->byteOrder){
 					u = bo_16_sw(u);
 				}
-				char utf8[4]={0};
-				_utf16_to_utf8(&u, 1, utf8);
-				text(user_data, utf8);
+				if (u < 0x010){
+					// first byte in uint16 is 00
+					if (u > 0x1f && u < 0x7f) {
+						//simple ANSI
+						char c[2] = {0};
+						c[0] = (char)u;
+						text(user_data, c);
+					} else {
+						//this is a mark
+						switch (u) {
+							case 0x0D: case 0x07: text(user_data, "\n"); break;
+							case 0x08: case 0x01: text(user_data, ""); break;
+							default: break;
+						}
+					}
+				} else {
+					char utf8[4]={0};
+					_utf16_to_utf8(&u, 1, utf8);
+					text(user_data, utf8);
+				}
 			}
 		}
 	}
@@ -3194,7 +3213,8 @@ static void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t cp,
 				u = bo_16_sw(u);
 			}
 			char utf8[4]={0};
-			_utf16_to_utf8(&u, 1, utf8);
+			sprintf(utf8, "0x%x ", u);
+			//_utf16_to_utf8(&u, 1, utf8);
 			text(user_data, utf8);
 		}
 
