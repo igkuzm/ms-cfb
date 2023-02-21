@@ -424,8 +424,11 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		FSINDEX SECT_INDEX = sect - (FAT_INDEX * SECTn);
 
 		// get SECT offset
+		SECT FAT = cfb->header._sectFat[FAT_INDEX];
+		if (cfb->biteOrder) 
+			FAT = bo_32_sw(FAT);		
 		DWORD off = 
-			cfb->header._sectFat[FAT_INDEX] * ssize + ssize
+			FAT * ssize + ssize
 			+ SECT_INDEX * 4;
 		// seek to offset
 		fseek(cfb->fp, off, SEEK_SET);

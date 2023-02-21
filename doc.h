@@ -9,6 +9,7 @@
 #ifndef DOC_H_
 #define DOC_H_
 
+#include "byteorder.h"
 #include <stdbool.h>
 #ifdef __cplusplus
 extern "C"{
@@ -2726,12 +2727,12 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->rgFcLcb);
 		return DOC_ERR_FILE;
 	}	
-	if (cfb->biteOrder){
-		int i;
-		for (i = 0; i < fib->cbRgFcLcb/4; ++i) {
-			fib->rgFcLcb[i] = bo_32_sw(fib->rgFcLcb[i]);	
-		}
-	}
+	//if (cfb->biteOrder){
+		//int i;
+		//for (i = 0; i < fib->cbRgFcLcb/4; ++i) {
+			//fib->rgFcLcb[i] = bo_32_sw(fib->rgFcLcb[i]);	
+		//}
+	//}
 
 #ifdef DEBUG
 	LOG("_cfb_doc_fib_init: read Fib.cswNew\n");
@@ -3038,11 +3039,15 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc->fib.rgFcLcb);
 	//FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx
 	uint32_t fcClx = rgFcLcb97->fcClx;
+	if (cfb->biteOrder)
+		fcClx = bo_32_sw(fcClx);
 #ifdef DEBUG
 	LOG("fcClx: %d\n", fcClx);
 #endif
 	//FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx
 	uint32_t lcbClx = rgFcLcb97->lcbClx;
+	if (cfb->biteOrder)
+		lcbClx = bo_32_sw(lcbClx);
 #ifdef DEBUG
 	LOG("lcbClx: %d\n", lcbClx);
 #endif	
