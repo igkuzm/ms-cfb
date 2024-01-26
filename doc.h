@@ -2,7 +2,7 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 21.02.2023
+ * Last Modified Date: 26.01.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -129,7 +129,7 @@ struct nFib2cbRgFcLcb {
 	uint16_t cbRgFcLcb;
 };
 
-const struct nFib2cbRgFcLcb nFib2cbRgFcLcbTable[] = {
+static const struct nFib2cbRgFcLcb nFib2cbRgFcLcbTable[] = {
 	{0x00C1, 0x005D}, 
 	{0x00D9, 0x006C}, 
 	{0x0101, 0x0088}, 
@@ -138,13 +138,13 @@ const struct nFib2cbRgFcLcb nFib2cbRgFcLcbTable[] = {
 };
 
 static int nFib2cbRgFcLcb_compare(const void *key, const void *value) {
-    const struct nFib2cbRgFcLcb *cp1 = key;
-    const struct nFib2cbRgFcLcb *cp2 = value;
+    const struct nFib2cbRgFcLcb *cp1 = (const struct nFib2cbRgFcLcb *)key;
+    const struct nFib2cbRgFcLcb *cp2 = (const struct nFib2cbRgFcLcb *)value;
     return cp1->nFib - cp2->nFib;
 }
 
-uint16_t cbRgFcLcb_get(uint16_t nFib){
-    struct nFib2cbRgFcLcb *result = bsearch(&nFib, nFib2cbRgFcLcbTable,
+static uint16_t cbRgFcLcb_get(uint16_t nFib){
+    struct nFib2cbRgFcLcb *result = (struct nFib2cbRgFcLcb *)bsearch(&nFib, nFib2cbRgFcLcbTable,
             sizeof(nFib2cbRgFcLcbTable)/sizeof(nFib2cbRgFcLcbTable[0]),
             sizeof(nFib2cbRgFcLcbTable[0]), nFib2cbRgFcLcb_compare);
 	if (result)
@@ -168,7 +168,7 @@ struct nFib2cswNew {
 	uint16_t cswNew;
 };
 
-const struct nFib2cswNew nFib2cswNewTable[] = {
+static const struct nFib2cswNew nFib2cswNewTable[] = {
 	{0x00C1, 0     }, 
 	{0x00D9, 0x0002}, 
 	{0x0101, 0x0002}, 
@@ -177,13 +177,13 @@ const struct nFib2cswNew nFib2cswNewTable[] = {
 };
 
 static int nFib2cswNew_compare(const void *key, const void *value) {
-    const struct nFib2cswNew *cp1 = key;
-    const struct nFib2cswNew *cp2 = value;
+    const struct nFib2cswNew *cp1 = (const struct nFib2cswNew *)key;
+    const struct nFib2cswNew *cp2 = (const struct nFib2cswNew *)value;
     return cp1->nFib - cp2->nFib;
 }
 
-uint16_t cswNew_get(uint16_t nFib){
-    struct nFib2cswNew *result = bsearch(&nFib, nFib2cswNewTable,
+static uint16_t cswNew_get(uint16_t nFib){
+    struct nFib2cswNew *result = (struct nFib2cswNew *)bsearch(&nFib, nFib2cswNewTable,
             sizeof(nFib2cswNewTable)/sizeof(nFib2cswNewTable[0]),
             sizeof(nFib2cswNewTable[0]), nFib2cswNew_compare);
 	if (result)
@@ -284,61 +284,61 @@ typedef struct FibBase
 	uint32_t reserved6;//(4 bytes): This value MUST be 0 and MUST be ignored. 
 } FibBase;
 
-uint8_t FibBaseA(FibBase *fibBase){
+static uint8_t FibBaseA(FibBase *fibBase){
 	return fibBase->ABCDEFGHIJKLM & 0x01;
 }
-uint8_t FibBaseB(FibBase *fibBase){
+static uint8_t FibBaseB(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x02) >> 1;
 }
-uint8_t FibBaseC(FibBase *fibBase){
+static uint8_t FibBaseC(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x04) >> 2;
 }
-uint8_t FibBaseD(FibBase *fibBase){
+static uint8_t FibBaseD(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x08) >> 3;
 }
-uint8_t FibBaseE(FibBase *fibBase){
+static uint8_t FibBaseE(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0xF0) >> 4;
 }
-uint8_t FibBaseF(FibBase *fibBase){
+static uint8_t FibBaseF(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x0100) >> 8;
 }
-uint8_t FibBaseG(FibBase *fibBase){
+static uint8_t FibBaseG(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x0200) >> 9;
 }
-uint8_t FibBaseH(FibBase *fibBase){
+static uint8_t FibBaseH(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x0400) >> 10;
 }
-uint8_t FibBaseI(FibBase *fibBase){
+static uint8_t FibBaseI(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x0800) >> 11;
 }
-uint8_t FibBaseJ(FibBase *fibBase){
+static uint8_t FibBaseJ(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x1000) >> 12;
 }
-uint8_t FibBaseK(FibBase *fibBase){
+static uint8_t FibBaseK(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x2000) >> 13;
 }
-uint8_t FibBaseL(FibBase *fibBase){
+static uint8_t FibBaseL(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x4000) >> 14;
 }
-uint8_t FibBaseM(FibBase *fibBase){
+static uint8_t FibBaseM(FibBase *fibBase){
 	return (fibBase->ABCDEFGHIJKLM & 0x8000) >> 15;
 }
-uint8_t FibBaseN(FibBase *fibBase){
+static uint8_t FibBaseN(FibBase *fibBase){
 	return fibBase->NOPQRS & 0x01;
 }
-uint8_t FibBaseO(FibBase *fibBase){
+static uint8_t FibBaseO(FibBase *fibBase){
 	return (fibBase->NOPQRS & 0x02) >> 1;
 }
-uint8_t FibBaseP(FibBase *fibBase){
+static uint8_t FibBaseP(FibBase *fibBase){
 	return (fibBase->NOPQRS & 0x04) >> 2;
 }
-uint8_t FibBaseQ(FibBase *fibBase){
+static uint8_t FibBaseQ(FibBase *fibBase){
 	return (fibBase->NOPQRS & 0x08) >> 3;
 }
-uint8_t FibBaseR(FibBase *fibBase){
+static uint8_t FibBaseR(FibBase *fibBase){
 	return (fibBase->NOPQRS & 0x10) >> 4;
 }
-uint8_t FibBaseS(FibBase *fibBase){
+static uint8_t FibBaseS(FibBase *fibBase){
 	return (fibBase->NOPQRS & 0xE0) >> 5;
 }
 
@@ -445,7 +445,7 @@ struct nFib2fibRgFcLcb {
 	enum RgFcLcb_t rgFcLcb;
 };
 
-const struct nFib2cbRgFcLcb nFib2fibRgFcLcbTable[] = {
+static const struct nFib2cbRgFcLcb nFib2fibRgFcLcbTable[] = {
 	{0x00C1, RgFcLcb97_t}, 
 	{0x00D9, RgFcLcb2000_t}, 
 	{0x0101, RgFcLcb2002_t}, 
@@ -454,13 +454,13 @@ const struct nFib2cbRgFcLcb nFib2fibRgFcLcbTable[] = {
 };
 
 static int nFib2fibRgFcLcb_compare(const void *key, const void *value) {
-    const struct nFib2fibRgFcLcb *cp1 = key;
-    const struct nFib2fibRgFcLcb *cp2 = value;
+    const struct nFib2fibRgFcLcb *cp1 = (const struct nFib2fibRgFcLcb *)key;
+    const struct nFib2fibRgFcLcb *cp2 = (const struct nFib2fibRgFcLcb *)value;
     return cp1->nFib - cp2->nFib;
 }
 
-enum RgFcLcb_t rgFcLcb_get(uint16_t nFib){
-    struct nFib2fibRgFcLcb *result = bsearch(&nFib, nFib2fibRgFcLcbTable,
+static enum RgFcLcb_t rgFcLcb_get(uint16_t nFib){
+    struct nFib2fibRgFcLcb *result = (struct nFib2fibRgFcLcb *)bsearch(&nFib, nFib2fibRgFcLcbTable,
             sizeof(nFib2fibRgFcLcbTable)/sizeof(nFib2fibRgFcLcbTable[0]),
             sizeof(nFib2fibRgFcLcbTable[0]), nFib2fibRgFcLcb_compare);
 	if (result)	
@@ -2178,14 +2178,14 @@ struct nFibNew2rgCswNewData {
 	enum rgCswNewData_t rgCswNewData;
 };
 
-const struct nFibNew2rgCswNewData nFibNew2rgCswNewDataTable[] = {
+static const struct nFibNew2rgCswNewData nFibNew2rgCswNewDataTable[] = {
 	{0x00D9, FibRgCswNewData2000_t}, 
 	{0x0101, FibRgCswNewData2000_t}, 
 	{0x010C, FibRgCswNewData2000_t}, 
 	{0x0112, FibRgCswNewData2007_t}, 
 };
 
-enum rgCswNewData_t rgCswNewData_get(uint16_t nFibNew){
+static enum rgCswNewData_t rgCswNewData_get(uint16_t nFibNew){
 	if (nFibNew == 0x0112)
 		return FibRgCswNewData2007_t;
 	return FibRgCswNewData2000_t;
@@ -2258,16 +2258,16 @@ struct Sprm {
 							// 7 Operand is 3 bytes.
 };
 
-uint8_t SprmIspmd(struct Sprm *sprm){
+static uint8_t SprmIspmd(struct Sprm *sprm){
 	return sprm->ispmdAsgcspra & 0x1F;
 }
-uint8_t SprmA(struct Sprm *sprm){
+static uint8_t SprmA(struct Sprm *sprm){
 	return (sprm->ispmdAsgcspra & 0x20) >> 9;
 }
-uint8_t SprmSgc(struct Sprm *sprm){
+static uint8_t SprmSgc(struct Sprm *sprm){
 	return (sprm->ispmdAsgcspra & 0x1C0) >> 10;
 }
-uint8_t SprmSpra(struct Sprm *sprm){
+static uint8_t SprmSpra(struct Sprm *sprm){
 	return (sprm->ispmdAsgcspra & 0xE00) >> 13;
 }
 
@@ -2339,13 +2339,13 @@ static const struct FcCompressedSpecialChar FcCompressedSpecialChars[] =
 };
 
 static int FcCompressedSpecialChar_compare(const void *key, const void *value) {
-    const struct FcCompressedSpecialChar *cp1 = key;
-    const struct FcCompressedSpecialChar *cp2 = value;
+    const struct FcCompressedSpecialChar *cp1 = (const struct FcCompressedSpecialChar *)key;
+    const struct FcCompressedSpecialChar *cp2 = (const struct FcCompressedSpecialChar *)value;
     return cp1->byte - cp2->byte;
 }
 
-uint16_t FcCompressedSpecialChar_get(uint16_t nFib){
-    struct FcCompressedSpecialChar *result = bsearch(&nFib, FcCompressedSpecialChars,
+static uint16_t FcCompressedSpecialChar_get(uint16_t nFib){
+    struct FcCompressedSpecialChar *result = (struct FcCompressedSpecialChar *)bsearch(&nFib, FcCompressedSpecialChars,
             sizeof(FcCompressedSpecialChars)/sizeof(FcCompressedSpecialChars[0]),
             sizeof(FcCompressedSpecialChars[0]), FcCompressedSpecialChar_compare);
 	if (result)
@@ -2391,14 +2391,14 @@ struct FcCompressed {
 				 //A - fCompressed (1 bit): A bit that specifies whether the text is compressed.
 				 //B - r1 (1 bit): This bit MUST be zero, and MUST be ignored.
 };
-bool FcCompressed(struct FcCompressed fc){
+static bool FcCompressed(struct FcCompressed fc){
 	///* TODO: byte order */
 	if ((fc.fc & 0x40000000) == 0x40000000) //if compressed - then ANSI
 		return true;
 	return false;
 };
-uint32_t FcValue(struct FcCompressed fc){
-	///* TODO: byte order */
+static uint32_t FcValue(struct FcCompressed fc){
+	//return fc.fc & 0xFFFFFFFC;	
 	return fc.fc & 0x3FFFFFFF;	
 }
 
@@ -2506,7 +2506,7 @@ typedef struct cfb_doc
 	
 	Fib  fib;             //File information block
 	struct Clx clx;       //clx data
-	bool byteOrder;				//need to change byte order
+	bool biteOrder;				//need to change byte order
 } cfb_doc_t;
 
 
@@ -2537,7 +2537,7 @@ typedef struct cfb_doc
  *     of FibRgCswNew into FibRgCswNew.
 */
 
-int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
+static int _doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 #ifdef DEBUG
 	LOG("start _cfb_doc_fib_init\n");
 #endif
@@ -2729,12 +2729,12 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 		free(fib->rgFcLcb);
 		return DOC_ERR_FILE;
 	}	
-	//if (cfb->biteOrder){
-		//int i;
-		//for (i = 0; i < fib->cbRgFcLcb/4; ++i) {
-			//fib->rgFcLcb[i] = bo_32_sw(fib->rgFcLcb[i]);	
-		//}
-	//}
+	if (cfb->biteOrder){
+		int i;
+		for (i = 0; i < fib->cbRgFcLcb/4; ++i) {
+			fib->rgFcLcb[i] = bo_32_sw(fib->rgFcLcb[i]);	
+		}
+	}
 
 #ifdef DEBUG
 	LOG("_cfb_doc_fib_init: read Fib.cswNew\n");
@@ -2788,11 +2788,11 @@ int _cfb_doc_fib_init(Fib *fib, FILE *fp, struct cfb *cfb){
 	return 0;
 };
 
-FILE *_table_stream(cfb_doc_t *doc, struct cfb *cfb){
-	char *table = "0Table";
+static FILE *_table_stream(cfb_doc_t *doc, struct cfb *cfb){
+	char *table = (char *)"0Table";
 	Fib *fib = &doc[0].fib;
 	if (FibBaseG(fib[0].base))
-		table = "1Table";
+		table = (char *)"1Table";
 #ifdef DEBUG
 	LOG("_table_stream: table: %s\n", table);
 #endif	
@@ -2829,7 +2829,7 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	LOG("_plcpcd_init: allocate aCP\n");
 #endif	
 	//allocate aCP
-	PlcPcd->aCp = malloc(4);
+	PlcPcd->aCp = (uint32_t *)malloc(4);
 	if (!PlcPcd->aCp){
 		free(PlcPcd);	
 		return -1;
@@ -2839,26 +2839,25 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	i=0;
 	uint32_t ch;
 	while(fread(&ch, 4, 1, doc->Table) == 1){
-		if (doc->byteOrder){
+		if (doc->biteOrder){
 			ch = bo_32_sw(ch);
 		}
 		PlcPcd->aCp[i] = ch;
 #ifdef DEBUG
 	LOG("_plcpcd_init: aCp[%d]: %u\n", i, PlcPcd->aCp[i]);
 #endif		
+		i++;
 		if (ch == lastCp)
 			break;
 
 		//realloc aCp
 #ifdef DEBUG
-	LOG("_plcpcd_init: realloc aCP with size: %u\n", (i+1)*4);
+	LOG("_plcpcd_init: realloc aCP with size: %ld\n", (i+1)*4);
 #endif
 		void *ptr = realloc(PlcPcd->aCp, (i+1)*4);
 		if(!ptr)
 			break;
-		PlcPcd->aCp = ptr;
-		//iterate
-		i++;
+		PlcPcd->aCp = (uint32_t *)ptr;
 	}
 #ifdef DEBUG
 	LOG("_plcpcd_init: number of cp in array: %d\n", i);
@@ -2868,33 +2867,42 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 
 	//read PCD - has 64bit
 	uint32_t size = len - i*4;
-#ifdef DEBUG
-	LOG("_plcpcd_init: allocate aCP with size: %u\n", size);
-#endif	
-	PlcPcd->aPcd = malloc(size);
-	if (!PlcPcd->aPcd){
-		free(PlcPcd->aCp);	
-		free(PlcPcd);	
-		return -1;
-	}
-	fread(PlcPcd->aPcd, size, 1, doc->Table);
+	
 	//number of Pcd in array
 	PlcPcd->aPcdl = size / 8;
 #ifdef DEBUG
 	LOG("_plcpcd_init: number of Pcd in array: %d\n", PlcPcd->aPcdl);
 #endif	
 	
-	if (doc->byteOrder){
-		for (i = 0; i < PlcPcd->aPcdl; ++i) {
-			PlcPcd->aPcd[i].ABCfR2 = bo_16_sw(PlcPcd->aPcd[i].ABCfR2); 
-			PlcPcd->aPcd[i].prm = bo_16_sw(PlcPcd->aPcd[i].prm); 
-			PlcPcd->aPcd[i].fc.fc = bo_32_sw(PlcPcd->aPcd[i].fc.fc); 
-		}
+#ifdef DEBUG
+	LOG("_plcpcd_init: allocate aPcd with size: %ld\n", size);
+#endif
+	PlcPcd->aPcd = (struct Pcd *)malloc(size);
+	if (!PlcPcd->aPcd){
+		free(PlcPcd->aCp);	
+		free(PlcPcd);	
+		return -1;
 	}
 
+	// get Pcd array
+	for (i = 0; i < PlcPcd->aPcdl; ++i) {
+		uint64_t ch;
+		struct Pcd Pcd;
+		fread(&Pcd.ABCfR2, 2, 1, doc->Table);
+		fread(&Pcd.fc.fc, 4, 1, doc->Table);
+		fread(&Pcd.prm, 2, 1, doc->Table);
+		if (doc->biteOrder){
+			Pcd.ABCfR2 = bo_16_sw(Pcd.ABCfR2);
+			Pcd.fc.fc = bo_32_sw(Pcd.fc.fc);
+			Pcd.prm = bo_16_sw(Pcd.prm);
+		}
+
 #ifdef DEBUG
-	LOG("_plcpcd_init: PlcPcd->aPcd[%d]: ABCfR2: 0x%x, FC: 0x%x, PRM: 0x%x\n", i, PlcPcd->aPcd[i].ABCfR2, PlcPcd->aPcd[i].fc.fc, PlcPcd->aPcd[i].prm);
+		LOG("_plcpcd_init: PlcPcd->aPcd[%d]: ABCfR2: 0x%x, FC: %d, PRM: 0x%x\n", i, Pcd.ABCfR2, Pcd.fc.fc, Pcd.prm);
 #endif	
+		PlcPcd->aPcd[i] = Pcd;
+	}
+
 	
 #ifdef DEBUG
 	LOG("_plcpcd_init done\n");
@@ -2903,12 +2911,36 @@ int _plcpcd_init(struct PlcPcd * PlcPcd, uint32_t len, cfb_doc_t *doc){
 	return 0;
 }
 
-int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
+/* init CLX structure */
+static int _clx_init(cfb_doc_t *doc)
+{
 
 #ifdef DEBUG
 	LOG("start _clx_init\n");
 #endif
 
+	//get CLX
+	//All versions of the FIB contain exactly one FibRgFcLcb97 
+	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc->fib.rgFcLcb);
+	
+	//FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx
+	uint32_t fcClx = rgFcLcb97->fcClx;
+	if (doc->biteOrder)
+		fcClx = bo_32_sw(fcClx);
+#ifdef DEBUG
+	LOG("fcClx: %d\n", fcClx);
+#endif
+	
+	//FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx
+	uint32_t lcbClx = rgFcLcb97->lcbClx;
+	if (doc->biteOrder)
+		lcbClx = bo_32_sw(lcbClx);
+#ifdef DEBUG
+	LOG("lcbClx: %d\n", lcbClx);
+#endif	
+
+	struct Clx *clx = &doc->clx;
+	
 	//get clx
 	uint8_t ch;
 	fseek(doc->Table, fcClx, SEEK_SET);
@@ -2925,13 +2957,13 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 #ifdef DEBUG
 	LOG("_clx_init: allocate RgPrc\n");
 #endif
-		clx->RgPrc = malloc(sizeof(struct Prc));
+		clx->RgPrc = (struct Prc *)malloc(sizeof(struct Prc));
 		if (!clx->RgPrc)
 			return DOC_ERR_ALLOC;
 		
 		int16_t cbGrpprl; //the first 2 bite of PrcData - signed integer
 		fread(&cbGrpprl, 2, 1, doc->Table);
-		if (doc->byteOrder){
+		if (doc->biteOrder){
 			cbGrpprl = bo_16_sw(cbGrpprl);
 		}
 #ifdef DEBUG
@@ -2939,12 +2971,11 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 #endif		
 		if (cbGrpprl > 0x3FA2) //error
 			return DOC_ERR_FILE;		
-		
 		//allocate RgPrc->data 
 #ifdef DEBUG
 	LOG("_clx_init: allocate RgPrc->data\n");
 #endif
-		clx->RgPrc->data = malloc(sizeof(struct PrcData));
+		clx->RgPrc->data = (struct PrcData *)malloc(sizeof(struct PrcData));
 		if (!clx->RgPrc->data)
 			return DOC_ERR_ALLOC;
 
@@ -2954,7 +2985,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 #ifdef DEBUG
 	LOG("_clx_init: allocate GrpPrl with size: 0x%x\n", cbGrpprl);
 #endif		
-		clx->RgPrc->data->GrpPrl = malloc(cbGrpprl);
+		clx->RgPrc->data->GrpPrl = (struct Prl *)malloc(cbGrpprl);
 		if (!clx->RgPrc->data->GrpPrl)
 			return DOC_ERR_ALLOC;
 		
@@ -2976,7 +3007,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 #ifdef DEBUG
 	LOG("_clx_init: allocate PlcPcd\n");
 #endif
-	clx->Pcdt = malloc(sizeof(struct Pcdt));
+	clx->Pcdt = (struct Pcdt *)malloc(sizeof(struct Pcdt));
 	if (!clx->Pcdt)
 		return DOC_ERR_ALLOC;	
 
@@ -2991,7 +3022,7 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 
 	//read lcb;
 	fread(&(clx->Pcdt->lcb), 4, 1, doc->Table);	
-	if (doc->byteOrder){
+	if (doc->biteOrder){
 		clx->Pcdt->lcb = bo_32_sw(clx->Pcdt->lcb);
 	}
 #ifdef DEBUG
@@ -3012,24 +3043,26 @@ int _clx_init(struct Clx *clx, uint32_t fcClx, uint32_t lcbClx, cfb_doc_t *doc){
 	return 0;
 }
 
-int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
+static int _doc_init(cfb_doc_t *doc, struct cfb *cfb){
 #ifdef DEBUG
 	LOG("start cfb_doc_init\n");
 #endif
+
+	memset(doc, 0, sizeof(cfb_doc_t));
 	
 	int ret = 0;
 	//get byte order
-	doc->byteOrder = cfb->biteOrder;
+	doc->biteOrder = cfb->biteOrder;
 	
 	//get WordDocument
-	FILE *fp = cfb_get_stream(cfb, "WordDocument");
+	FILE *fp = cfb_get_stream(cfb, (char*)"WordDocument");
 	if (!fp)	
 		return DOC_ERR_FILE;
 	fseek(fp, 0, SEEK_SET);
 	doc->WordDocument = fp;
 
 	//init FIB
-	_cfb_doc_fib_init(&(doc->fib), doc->WordDocument, cfb);
+	_doc_fib_init(&(doc->fib), doc->WordDocument, cfb);
 
 	//get table
 	doc->Table = _table_stream(doc, cfb);
@@ -3038,26 +3071,9 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}
 
-	//get CLX
-	//All versions of the FIB contain exactly one FibRgFcLcb97 
-	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc->fib.rgFcLcb);
-	//FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx
-	uint32_t fcClx = rgFcLcb97->fcClx;
-	if (cfb->biteOrder)
-		fcClx = bo_32_sw(fcClx);
-#ifdef DEBUG
-	LOG("fcClx: %d\n", fcClx);
-#endif
-	//FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx
-	uint32_t lcbClx = rgFcLcb97->lcbClx;
-	if (cfb->biteOrder)
-		lcbClx = bo_32_sw(lcbClx);
-#ifdef DEBUG
-	LOG("lcbClx: %d\n", lcbClx);
-#endif	
-
+		
 	//Read the Clx from the Table Stream
-	ret = _clx_init(&(doc->clx), fcClx, lcbClx, doc);
+	ret = _clx_init(doc);
 	if (ret)
 		return ret;	
 
@@ -3066,7 +3082,7 @@ int cfb_doc_init(cfb_doc_t *doc, struct cfb *cfb){
 #endif	
 	return 0;
 }
-void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
+static void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 		void *user_data,
 		int (*text)(
 			void *user_data,
@@ -3104,8 +3120,6 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 			DWORD off = (FcValue(fc) / 2) + PlcPcd->aCp[i];
 			fseek(doc->WordDocument, off, SEEK_SET);	
 			for (cp = PlcPcd->aCp[i]; cp < PlcPcd->aCp[i+1]; cp++){
-				//DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
-				//fseek(doc->WordDocument, off, SEEK_SET);	
 				char c[2] = {0};
 				fread(c, 1, 1, doc->WordDocument);			
 				text(user_data, c);
@@ -3122,11 +3136,9 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 			DWORD off = FcValue(fc) + 2*PlcPcd->aCp[i];
 			fseek(doc->WordDocument, off, SEEK_SET);	
 			for (cp = PlcPcd->aCp[i]; cp < PlcPcd->aCp[i+1]; cp++){
-				//DWORD off = FcValue(fc) + 2*(cp - PlcPcd->aCp[i]);
-				//fseek(doc->WordDocument, off, SEEK_SET);	
 				WORD u;
 				fread(&u, 2, 1, doc->WordDocument);
-				if (doc->byteOrder){
+				if (doc->biteOrder){
 					u = bo_16_sw(u);
 				}
 				if (u < 0x010){
@@ -3177,16 +3189,12 @@ void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 	}
 }
 
-static void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t cp, uint32_t len,
+static void _get_char_for_cp(cfb_doc_t *doc, uint32_t cp,
 		void *user_data,
-		int (*text)(
-			void *user_data,
-			char *str
-			)		
-		){
-	
-	int i, l=0; //iterator
-	while (l++ < len){
+		int (*callback)(void *user_data, int ch)		
+		)
+{
+	struct PlcPcd *PlcPcd = &(doc->clx.Pcdt->PlcPcd);
 
 /*
  * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
@@ -3195,56 +3203,102 @@ static void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t cp,
  * Thus, if the last element of PlcPcd.aCp is less than or equal to cp, cp is outside the range of
  * valid character positions in this document
  */
-		for (i = 0; i < PlcPcd->aPcdl; ++i) {
-			if (PlcPcd->aCp[i] > cp) {
-				--i;
-				break;
-			}	
-		}
-		
+		int i = 0;
+		while (PlcPcd->aCp[i] <= cp)
+			i++;
+		i--;	
+
 /*
  * PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
  * WordDocument Stream of the text at character position PlcPcd.aCp[i].
  */
-		struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
-		if (FcCompressed(fc)){
+	struct FcCompressed fc = PlcPcd->aPcd[i].fc;	
+	if (FcCompressed(fc)){
 /*
- * If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
- * offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
- * one of the special values in the table defined in the description of FcCompressed.fc. This is 
- * to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
- * in the WordDocument Stream and each character occupies one byte.
- */			
-			//ANSI
-			DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
-			fseek(doc->WordDocument, off, SEEK_SET);	
-			char c[2] = {0};
-			fread(c, 1, 1, doc->WordDocument);			
-			text(user_data, c);
+* If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character at 
+* offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it is 
+* one of the special values in the table defined in the description of FcCompressed.fc. This is 
+* to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc / 2 
+* in the WordDocument Stream and each character occupies one byte.
+*/			
+		//ANSI
+		DWORD off = (FcValue(fc) / 2) + (cp - PlcPcd->aCp[i]);
+		fseek(doc->WordDocument, off, SEEK_SET);	
+		int ch;
+		fread(&ch, 1, 1, doc->WordDocument);			
+		// check special chars
+		int sch = FcCompressedSpecialChar_get(ch);
+		if (sch)
+			callback(user_data, sch);
+		else
+			callback(user_data, ch);
 
-		} else {
+	} else {
 /*
- * If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
- * at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
- * that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
- * WordDocument Stream and each character occupies two bytes.
- */			
-			//UNICODE 16
-			DWORD off = FcValue(fc) + 2*(cp - PlcPcd->aCp[i]);
-			fseek(doc->WordDocument, off, SEEK_SET);	
-			WORD u;
-			fread(&u, 2, 1, doc->WordDocument);
-			if (doc->byteOrder){
+* If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode character
+* at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This is to say
+* that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc in the 
+* WordDocument Stream and each character occupies two bytes.
+*/			
+		//UNICODE 16
+		DWORD off = FcValue(fc) + 2*(cp - PlcPcd->aCp[i]);
+		fseek(doc->WordDocument, off, SEEK_SET);	
+		WORD u;
+		fread(&u, 2, 1, doc->WordDocument);
+		if (doc->biteOrder){
+			u = bo_16_sw(u);
+		}
+		char utf8[4]={0};
+		//sprintf(utf8, "0x%x ", u);
+		_utf16_to_utf8(&u, 1, utf8);
+		if (doc->biteOrder){
 				u = bo_16_sw(u);
 			}
-			char utf8[4]={0};
-			sprintf(utf8, "0x%x ", u);
-			//_utf16_to_utf8(&u, 1, utf8);
-			text(user_data, utf8);
-		}
+			if (u < 0x010){
+				// first byte in uint16 is 00
+				if (u > 0x1f && u < 0x7f) {
+					//simple ANSI
+					int ch;
+					fread(&ch, 1, 1, doc->WordDocument);			
+					callback(user_data, ch);
+				} else {
+					//this is a mark
 
-		// iterate
-		cp++;
+		/* Following symbols below 32 are allowed inside paragraph:
+			 0x0002 - footnote mark
+			 0x0007 - table separator (converted to tabmode)
+			 0x0009 - Horizontal tab ( printed as is)
+			 0x000B - hard return
+			 0x000C - page break
+			 0x000D - return - marks an end of paragraph
+			 0x001E - IS2 for some reason means short defis in Word.
+			 0x001F - soft hyphen in Word
+			 0x0013 - start embedded hyperlink
+			 0x0014 - separate hyperlink URL from text
+			 0x0015 - end embedded hyperlink
+			 */
+
+					switch (u) {
+						case 0x0D: callback(user_data, '\n'); break;
+						case 0x07: callback(user_data, '\n'); break;
+						case 0x1E: callback(user_data, '-' ); break;
+						case 0x09: callback(user_data, '\t'); break;
+						case 0x13: callback(user_data, ' ' ); break;
+						case 0x15: callback(user_data, ' ' ); break;
+						case 0x0C: callback(user_data, u)   ; break;
+						case 0x1F: callback(user_data, 0xAD); break;
+						case 0x0B: callback(user_data, 0x0A); break;
+						case 0x08: case 0x01: callback(user_data, ' '); break;
+						default: break;
+					}
+				}
+			} else if (u != 0xfeff) {
+				char utf8[4]={0};
+				_utf16_to_utf8(&u, 1, utf8);
+				for (i = 0; i < 4; ++i) {
+					callback(user_data, utf8[i]);
+				}
+			}
 	}
 }
 
@@ -3326,37 +3380,28 @@ static void _get_text_for_cp(cfb_doc_t *doc, struct PlcPcd *PlcPcd, uint32_t cp,
  * 7. Set cp to PlcPcd.aCp[i+1]. Set i to i + 1. Go to step 2.
 */
 
-int cfb_doc_parse(
-		struct cfb *cfb,
-		void *user_data,
-		int (*text)(
-			void *user_data,
-			char *str
-			)
+static int doc_parse(const char *filename, void *user_data,
+		int (*main_document)(void *user_data, int ch)
 		)
 {
 #ifdef DEBUG
-	LOG("start cfb_doc_parse\n");
+	LOG("start\n");
 #endif
-	
-	int ret = 0;
+	int ret, cp, i;
 
-	//Read the FIB from offset zero in the WordDocument Stream
+	// get CFB
+	struct cfb cfb;
+	ret = cfb_open(&cfb, filename);
+	if (ret)
+		return ret;
+	
+	// Read the DOC Streams
 	cfb_doc_t doc;
-	ret = cfb_doc_init(&doc, cfb);
+	ret = _doc_init(&doc, &cfb);
 	if (ret)
 		return ret;
 
-	//get text
-	//_get_text_for_cp(&doc, &(doc.clx.Pcdt->PlcPcd), 0, doc.fib.rgLw97->ccpText, user_data, text);
-	_get_text(&doc, &(doc.clx.Pcdt->PlcPcd), user_data, text);
-
-#ifdef DEBUG
-	LOG("cfb_doc_parse done\n");
-#endif
-	
-	return 0;
-}
+	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc.fib.rgFcLcb);
 
 /*
  * Main Document
@@ -3365,10 +3410,17 @@ int cfb_doc_parse(
  * The main document begins at CP zero, and is FibRgLw97.ccpText characters long.
  * The last character in the main document MUST be a paragraph mark (Unicode 0x000D).
  */
-void cfb_doc_main_document(struct cfb *cfb){
+for (cp = 0; cp <= doc.fib.rgLw97->ccpText; ++cp) {
+	_get_char_for_cp(&doc, cp, user_data, main_document);
 	
 }
 
+
+#ifdef DEBUG
+	LOG("done\n");
+#endif
+	return 0;
+}
 
 #ifdef __cplusplus
 }

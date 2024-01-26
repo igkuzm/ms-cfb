@@ -2,10 +2,10 @@
  * File              : test.c
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 05.11.2022
- * Last Modified Date: 19.02.2023
+ * Last Modified Date: 25.01.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
-
+#define DEBUG 1
 #include "cfb.h"
 #include "property_set.h"
 #include "debug.h"
@@ -103,22 +103,24 @@
 
 int text_cb(
 	void *user_data,
-	char *str
+	int ch
 	)
 {
-	printf("%s", str);
+	printf("%c", ch);
 	return 0;
 }
 
 int main(int argc, char *argv[])
 {
+	if (argc < 2)
+		return -1;
 
-	struct cfb cfb;
-	int error = cfb_open(&cfb, "1.doc");
+	//struct cfb cfb;
+	//int error = cfb_open(&cfb, "/home/kuzmich/3.doc");
 	//if (error)
 		//printf("ERROR OPEN FILE: %x\n", error);
 
-	print_cfb_header(&cfb);
+	//print_cfb_header(&cfb);
 
 	/*cfb_get_dirs(&cfb, NULL, callback);*/
 
@@ -162,8 +164,9 @@ int main(int argc, char *argv[])
 
 	/*printf("SIZE OF FibBase: %ld\n", sizeof(FibBase));*/
 	/*printf("SIZE OF FibRgW97: %ld\n", sizeof(FibRgW97));*/
-	int ret = cfb_doc_parse(&cfb, NULL, text_cb);
+	int ret = doc_parse(argv[1], NULL, text_cb);
 
+	printf("\n");
 	//printf("RET: %d\n", ret);
 
 	return 0;

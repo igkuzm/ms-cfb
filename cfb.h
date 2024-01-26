@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 21.02.2023
+ * Last Modified Date: 25.01.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -804,6 +804,8 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 #ifdef DEBUG
 	LOG("start _cfb_init\n");
 #endif
+
+	memset(cfb, 0, sizeof(struct cfb));
 	
 	int error = 0;
 
@@ -914,7 +916,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	return error;
 }
 
-int cfb_open(struct cfb * cfb, const char * filename){
+static int cfb_open(struct cfb * cfb, const char * filename){
 	FILE * newfile;
 	FILE * fp = fopen(filename, "r");
 	if (!fp){
@@ -957,7 +959,7 @@ int cfb_open(struct cfb * cfb, const char * filename){
 
 
 //resturn len of utf16 string
-size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
+static size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
 	int i;
 	char *ptr = (char *)utf8;
 	while (*ptr){ //iterate chars
@@ -1019,7 +1021,7 @@ size_t _utf8_to_utf16(const char * utf8, int len, WORD * utf16){
 
 
 
-int cfb_get_dirs(struct cfb * cfb, void * user_data,
+static int cfb_get_dirs(struct cfb * cfb, void * user_data,
 			int(*callback)(void * user_data, cfb_dir dir))
 {
 	int i=0, c;
@@ -1037,7 +1039,7 @@ int cfb_get_dirs(struct cfb * cfb, void * user_data,
 	return 0;
 }
 
-void cfb_close(struct cfb * cfb){
+static void cfb_close(struct cfb * cfb){
 	fclose(cfb->ministream);
 	fclose(cfb->fp);
 }
