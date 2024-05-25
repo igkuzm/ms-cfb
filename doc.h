@@ -9,6 +9,7 @@
 #ifndef DOC_H_
 #define DOC_H_
 
+#include <cstdint>
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -2312,20 +2313,31 @@ typedef struct FibRgCswNewData2007
  * table, or section.
  */ 
 struct Sprm {
-	uint16_t ispmdAsgcspra; //ispmd (9 bits): An unsigned integer that, when combined 
-							//with fSpec, specifies the property being modified. See 
-							//the tables in the Single Property Modifiers section (2.6) 
-							//for the complete list of valid ispmd, fSpec, spra 
+	uint16_t ispmdAsgcspra; //ispmd (9 bits): An unsigned 
+													//integer that, when combined 
+							//with fSpec, specifies the property being 
+							//modified. See 
+							//the tables in the Single Property 
+							//Modifiers section (2.6) 
+							//for the complete list of valid ispmd, 
+							//fSpec, spra 
 							//combinations for each sgc. 
 							// 
-							// A - fSpec (1 bit): When combined with ispmd, specifies the 
-							// property being modified. See the tables in the Single 
-							// Property Modifiers section (2.6) for the complete list of 
-							// valid ispmd, fSpec, spra combinations for each sgc.
+							// A - fSpec (1 bit): When combined with 
+							// ispmd, specifies the 
+							// property being modified. See the tables 
+							// in the Single 
+							// Property Modifiers section (2.6) for the 
+							// complete list of 
+							// valid ispmd, fSpec, spra combinations for 
+							// each sgc.
 							// 
-							// sgc (3 bits): An unsigned integer that specifies the kind of
-							// document content to which this Sprm applies. The following 
-							// table specifies the valid values and their meanings.
+							// sgc (3 bits): An unsigned integer that 
+							// specifies the kind of
+							// document content to which this Sprm applies. 
+							// The following 
+							// table specifies the valid values and 
+							// their meanings.
 							// Sgc: Meaning
 							// 1:    Sprm is modifying a paragraph property.
 							// 2:    Sprm is modifying a character property.
@@ -2333,19 +2345,25 @@ struct Sprm {
 							// 4:    Sprm is modifying a section property.
 							// 5:    Sprm is modifying a table property.
 							// 
-							// spra (3 bits): An unsigned integer that specifies the size 
-							// of the operand of this Sprm. The following table specifies 
+							// spra (3 bits): An unsigned integer that 
+							// specifies the size 
+							// of the operand of this Sprm. The following 
+							// table specifies 
 							// the valid values and their meanings 
 							// Spra: Meaning
-							// 0 Operand is a ToggleOperand (which is 1 byte in size).
+							// 0 Operand is a ToggleOperand (which is 1 
+							// byte in size).
 							// 1 Operand is 1 byte.
 							// 2 Operand is 2 bytes.
 							// 3 Operand is 4 bytes.
 							// 4 Operand is 2 bytes.
 							// 5 Operand is 2 bytes.
-							// 6 Operand is of variable length. The first byte of the 
-							// operand indicates the size of the rest of the operand, 
-							// except in the cases of sprmTDefTable and sprmPChgTabs.
+							// 6 Operand is of variable length. The 
+							// first byte of the 
+							// operand indicates the size of the rest of 
+							// the operand, 
+							// except in the cases of sprmTDefTable 
+							// and sprmPChgTabs.
 							// 7 Operand is 3 bytes.
 };
 
@@ -2365,13 +2383,15 @@ static uint8_t SprmSpra(struct Sprm *sprm){
 
 /*
  * Prl
- * The Prl structure is a Sprm that is followed by an operand. The Sprm specifies a property to 
- * modify, and the operand specifies the new value.
- */
+ * The Prl structure is a Sprm that is followed by an 
+ * operand. The Sprm specifies a property to 
+ * modify, and the operand specifies the new value.*/
 struct Prl {
-	struct Sprm sprm;   //(2 bytes): Sprm which specifies the property to be modified
-	void *operand;      //(variable): The meaning of the operand depends on the sprm(Single 
-					    //Property Modifiers).
+	struct Sprm sprm;   //(2 bytes): Sprm which specifies 
+											//the property to be modified
+	uint8_t operand[];  //(variable): The meaning of the 
+											//operand depends on the sprm(Single 
+					            //Property Modifiers).
 };
 
 /*
@@ -2627,6 +2647,72 @@ static struct PlcBtePapx * plcbtePapx_get(
 	return plcbtePapx;
 }
 
+/* 2.9.23 BxPap
+ * The BxPap structure specifies the offset of a PapxInFkp
+ * in PapxFkp. */
+struct BxPap {
+ uint8_t bOffset;// bOffset (1 byte): An unsigned integer
+								 // that specifies the offset of a PapxInFkp
+								 // in a PapxFkp. The
+								 // offset of the PapxInFkp is bOffset*2. If
+								 // bOffset is 0 then there is no PapxInFkp
+								 // for this
+								 // paragraph and this paragraph has the
+								 // default properties as specified in
+								 // section 2.6.2.
+ uint8_t reserved[12];
+								 // reserved (12 bytes): Specifies
+								 // version-specific paragraph height
+								 // information. This value
+								 // SHOULD<203> be 0 and SHOULD<204> be
+								 // ignored.
+};
+
+/* 2.9.114 GrpPrlAndIstd
+ * The GrpPrlAndIstd structure specifies the style and
+ * properties that are applied to a paragraph, a
+ * table row, or a table cell. */
+struct GrpPrlAndIstd {
+	uint16_t istd; // istd (2 bytes): An integer that
+								 // specifies the style that is applied to
+								 // this paragraph, cell marker or
+								 // table row marker. See Applying
+								 // Properties for more details about how to
+								 // interpret this value.
+	uint8_t grpprl[];
+								 // grpprl (variable): An array of Prl
+								 // elements. Specifies the properties of
+								 // this paragraph, table row, or
+								 // table cell. This array MUST contain a
+								 // whole number of Prl elements.
+};
+
+/* 2.9.175 PapxInFkp
+ * The PapxInFkp structure specifies a set of text
+ * properties. */
+struct PapxInFkp {
+ uint8_t cb;     // cb (1 byte): An unsigned integer that
+								 // specifies the size of the grpprlInPapx.
+								 // If this value is not 0,
+								 // the grpprlInPapx is 2×cb-1 bytes long.
+								 // If this value is 0, the size is
+								 // specified by the first byte of
+								 // grpprlInPapx.
+ uint8_t grpprlInPapx[];
+								 // grpprlInPapx (variable): If cb is 0, the
+								 // first byte of grpprlInPapx (call it cb')
+								 // is an unsigned
+								 // integer that specifies the size of the
+								 // rest of grpprlInPapx. cb' MUST be at
+								 // least 1. After cb',
+								 // there are 2×cb' more bytes in
+								 // grpprlInPapx. The bytes after cb' form a
+								 // GrpPrlAndIstd.
+								 // If cb is nonzero, grpprlInPapx is
+								 // GrpPrlAndIstd.
+};
+
+
 /* The PapxFkp structure maps paragraphs, table rows, and
  * table cells to their properties. A PapxFkp
  * structure is 512 bytes in size, with cpara in the last
@@ -2653,7 +2739,7 @@ struct PapxFkp {
 									 // a paragraph; instead it specifies the
 									 // end of the last paragraph.
 									 //
-	uint32_t *rgbx;  // An array of BxPap, followed by
+	uint8_t *rgbx;   // An array of BxPap, followed by
 									 // PapxInFkp structures. The elements of
 									 // this array,
 									 // which has cpara elements and parallels
@@ -2687,7 +2773,7 @@ static struct PapxFkp * papxFkp_get(
 			ERR("malloc"); exit(ENOMEM));
 	s->cpara = &((uint8_t *)p)[511];
 	s->rgfc = (uint32_t *)p;
-	s->rgbx = &(((uint32_t *)p)[*s->cpara + 1]);
+	s->rgbx = &(((uint8_t *)p)[*s->cpara + 1]);
 	return s;
 }
 
@@ -3441,6 +3527,80 @@ static void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 	}
 }
 
+/* 2.4.6.1 Direct Paragraph Formatting
+ * This section explains how to find the properties applied
+ * directly (as opposed to through a style, for
+ * example) to a paragraph, given a character position cp
+ * within it. The properties are found as an array
+ * of Prl elements. */
+static void _direct_paragraph_formatting(
+		cfb_doc_t *doc, CP cp,
+		struct PapxFkp *papxFkp, int k,
+		uint32_t of, struct Pcd *pcd)
+{
+/* 1. Follow the algorithm from Determining Paragraph
+ * Boundaries for finding the character position of
+ * the last character in the paragraph to completion. From
+ * step 5, remember the PapxFkp and k.
+ * From step 4, remember the offset in the WordDocument
+ * Stream at which PapxFkp was read. Let
+ * this offset be called of. From step 2 remember the Pcd.
+ * If the algorithm from Determining
+ * Paragraph Boundaries specifies that cp is invalid, leave
+ * the algorithm. */
+
+/* 2. Find a BxPap at PapxFkp.rgbx[k]. Find a PapxInFkp at
+ * offset of + 2*BxPap.bOffset */
+	BxPap *bxPap = (BxPap *)(papxFkp->rgbx[k]);
+	uint8_t offset = of + 2 * bxPap->bOffset;
+	void *p = &((papxFkp->rgbx)[offset]);
+	PapxInFkp *papxInFkp = (PapxInFkp *)p;
+
+/* 3. Find a GrpprlAndIstd in the PapxInFkp from step 2.
+ * The offset and size of the GrpprlAndIstd
+ * is instructed by the first byte of the PapxInFkp, as
+ * detailed at PapxInFkp. */
+	struct GrpPrlAndIstd *grpPrlAndIstd;
+	int len = 1;
+	
+	if (papxInFkp->cb){
+		grpPrlAndIstd = (GrpPrlAndIstd *)papxInFkp->grpprlInPapx;
+	} else {
+		// cb is 0
+		uint8_t cb_ = papxInFkp->grpprlInPapx[0];
+		if (cb_ < 1) {
+			// error
+			ERR("cb' MUST be at least 1");
+			return;
+		}
+		void *p = &(papxInFkp->grpprlInPapx[1]);
+		grpPrlAndIstd = (GrpPrlAndIstd *)p;
+		len = 2 * cb_;
+	}
+
+/* 4. Find the grpprl within the GrpprlAndIstd. This is an
+ * array of Prl elements that specifies the
+ * direct properties of this paragraph. */
+
+	int i;
+	for (i = 0; i < len; ++i) {
+		Prl *prl = grpPrlAndIstd->grpprl[i];
+	}
+
+/* 5. Finally Pcd.Prm specifies further property
+ * modifications that apply to this paragraph. If Pcd.Prm
+ * is a Prm0 and the Sprm specified within Prm0 modifies a
+ * paragraph property, append to the
+ * array of Prl elements from the previous step a single Prl
+ * made of the Sprm and value in Prm0. if
+ * Pcd.Prm is a Prm1, append to the array of Prl elements
+ * from the previous step any Sprm
+ * structures that modify paragraph properties within the
+ * array of Prl elements specified by Prm1. */
+}
+
+
+
 /* 2.4.2 Determining Paragraph Boundaries
  * This section specifies how to find the beginning and end 
  * character positions of the paragraph that contains a 
@@ -3459,7 +3619,7 @@ static void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
  * Text. If the algorithm from Retrieving Text specifies 
  * that cp is invalid, leave the algorithm. */
 static CP _first_cp_in_paragraph(
-		cfb_doc_t *doc, uint32_t cp)
+		cfb_doc_t *doc, CP cp)
 {
 	CP fcp = CPERROR;
 	struct PapxFkp *papxFkp = NULL;
@@ -3593,7 +3753,7 @@ _first_cp_in_paragraph_8:
  * Text specifies that cp is invalid, leave the algorithm.
  */
 static CP _last_cp_in_paragraph(
-		cfb_doc_t *doc, uint32_t cp)
+		cfb_doc_t *doc, CP cp)
 {
 	CP lcp = CPERROR;
 	struct PapxFkp *papxFkp = NULL;
@@ -3618,7 +3778,8 @@ static CP _last_cp_in_paragraph(
 
 		uint32_t fcPcd = FcValue(pcd->fc);
 		uint32_t fc = fcPcd + 2 * (cp - plcPcd->aCp[i]);
-		uint32_t fcMac = fcPcd + 2 * (plcPcd->aCp[i+1] - plcPcd->aCp[i]);
+		uint32_t fcMac = fcPcd + 2 * (plcPcd->aCp[i+1] - 
+				plcPcd->aCp[i]);
 		if (FcCompressed(pcd->fc)){
 			fc /= 2;
 			fcPcd /= 2;
@@ -3633,19 +3794,11 @@ static CP _last_cp_in_paragraph(
  * fc, then go to step 7. Read a PapxFkp at
  * offset aPnBtePapx[j].pn *512 in the WordDocument Stream */
 		
-		printf("fc: %d\n", fc);
-		printf("fcPcd: %d\n", fcPcd);
-		printf("fcMac: %d\n", fcMac);
-
 		int j;
 		for (j=0; doc->plcbtePapx->aFc[j] <= fc; )
 			j++;	
 		j--;
 		
-		printf("J: %d\n", j);
-		
-		printf("last element of plcbtePapx.aFc: %d\n", doc->plcbtePapx->aFc[doc->plcbtePapxNaFc-1]);
-
 		if (doc->plcbtePapx->aFc[doc->plcbtePapxNaFc-1] <= fc){
 			// goto 7
 			goto _last_cp_in_paragraph_7;
@@ -3654,7 +3807,8 @@ static CP _last_cp_in_paragraph(
 		papxFkp = papxFkp_get(
 				doc->WordDocument, 
 				pnFkpPapx_pn(
-					doc->plcbtePapx->aPnBtePapx[j]) * 512);
+					pnFkpPapx_pn(
+						doc->plcbtePapx->aPnBtePapx[j])) * 512);
 
 /* 5. Find largest k such that PapxFkp.rgfc[k] ≤ fc. If the
  * last element of PapxFkp.rgfc is less than
@@ -3666,10 +3820,6 @@ static CP _last_cp_in_paragraph(
 			k++;	
 		k--;
 		
-		printf("K: %d\n", k);
-		printf("papxFkp->rgfc[k]: %d\n", papxFkp->rgfc[k]);
-		printf("papxFkp-: %d\n", papxFkp->rgfc[k]);
-		
 		if (papxFkp->rgfc[*papxFkp->cpara] <= fc){
 			ERR("last element of PapxFkp.rgfc is less"
 					" than or equal to fc: cp is outside the"
@@ -3677,14 +3827,14 @@ static CP _last_cp_in_paragraph(
 			return CPERROR;
 		}
 		uint32_t fcLim = papxFkp->rgfc[k+1];
-
+		
 /* 6. If fcLim ≤ fcMac, then let dfc be (fcLim – fcPcd). If
  * Pcd.fc.fCompressed is zero, then set dfc
  * to dfc / 2. The last character of the paragraph is at
  * character position PlcPcd.aCp[i] + dfc – 1.
  * Leave the algorithm. */
 		if (fcLim <= fcMac){
-			uint32_t dfc = fcLim - fcMac;
+			uint32_t dfc = fcLim - fcPcd;
 			if (!FcCompressed(pcd->fc)){
 				dfc /= 2;
 				lcp = plcPcd->aCp[i] + dfc - 1;
@@ -3705,8 +3855,29 @@ _last_cp_in_paragraph_7:
 		free(papxFkp);
 	return lcp;
 }
+
+/* 2.4.4 Determining Cell Boundaries
+ * This section describes an algorithm to find the
+ * boundaries of the innermost table cell containing a
+ * given character position or to determine that the given
+ * character position is not in a table cell. Every
+ * valid character position in a document belongs to a
+ * paragraph, so table depth can be computed for
+ * each paragraph. If a paragraph is found to be at depth
+ * zero, that paragraph is not in a table cell.
+ * Given character position cp, use the following algorithm
+ * to determine if cp is in a table cell.*/
+static int _get_cell_depth_for_cp(cfb_doc_t *doc, CP cp)
+{
+/* 1. Follow the procedure from Direct Paragraph Formatting
+ * to find the paragraph properties for the
+ * paragraph that contains cp. Apply the properties, and
+ * determine the table depth as specified in
+ * Overview of Tables. Call this itapOrig.*/
+
+}
 	
-static void _get_char_for_cp(cfb_doc_t *doc, uint32_t cp,
+static void _get_char_for_cp(cfb_doc_t *doc, CP cp,
 		void *user_data,
 		int (*callback)(void *user_data, int ch)		
 		)
@@ -3822,7 +3993,9 @@ static void _get_char_for_cp(cfb_doc_t *doc, uint32_t cp,
 }
 
 static int doc_parse(const char *filename, void *user_data,
-		int (*main_document)(void *user_data, int ch)
+		int (*main_document)(void *user_data, int ch),
+		int (*footnotes)(void *user_data, int ch),
+		int (*headers)(void *user_data, int ch)
 		)
 {
 #ifdef DEBUG
@@ -3844,7 +4017,7 @@ static int doc_parse(const char *filename, void *user_data,
 
 	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc.fib.rgFcLcb);
 
-/* Main Document
+/* 2.3.1 Main Document
  * The main document contains all content outside any of 
  * the specialized document parts, including
  * anchors that specify where content from the other 
@@ -3853,21 +4026,52 @@ static int doc_parse(const char *filename, void *user_data,
  * FibRgLw97.ccpText characters long.
  * The last character in the main document MUST be a 
  * paragraph mark (Unicode 0x000D).*/
-//for (cp = 0; cp <= doc.fib.rgLw97->ccpText; ++cp) {
-	cp = 100;
-	CP fcp = _first_cp_in_paragraph(&doc, cp);
-	if (fcp == CPERROR)
-		ERR("FCP ERROR");
-	if (cp == fcp)
-		main_document(user_data, '[');
-	_get_char_for_cp(&doc, cp, user_data, main_document);
-	CP lcp = _last_cp_in_paragraph(&doc, cp);
-	if (lcp == CPERROR)
-		ERR("LCP ERROR");
-	printf("LCP: %d\n", lcp);
-	if (cp == lcp)
-		main_document(user_data, ']');
-//}
+for (cp = 0; cp < doc.fib.rgLw97->ccpText; ++cp) {
+	_get_char_for_cp(&doc, cp, user_data,
+			main_document);
+}
+
+/* 2.3.2 Footnotes
+ * The footnote document contains all of the content in the
+ * footnotes. It begins at the CP immediately
+ * following the Main Document, and is FibRgLw97.ccpFtn
+ * characters long.
+ * The locations of individual footnotes within the footnote
+ * document are specified by a PlcffndTxt whose
+ * location is specified by the fcPlcffndTxt member of
+ * FibRgFcLcb97. The locations of the footnote
+ * reference characters in the Main Document are specified
+ * by a PlcffndRef whose location is specified
+ * by the fcPlcffndRef member of FibRgFcLcb97. */
+for (;cp < doc.fib.rgLw97->ccpFtn; ++cp) {
+	_get_char_for_cp(&doc, cp, user_data,
+			footnotes);
+}
+
+/* by the fcPlcffndRef member of FibRgFcLcb97.
+ * 2.3.3 Headers
+ * The header document contains all content in headers and
+ * footers as well as the footnote and endnote
+ * separators. It begins immediately after the footnote
+ * document and is FibRgLw97.ccpHdd characters
+ * long.
+ * The header document is split into text ranges called
+ * stories, as specified by PlcfHdd. Each story
+ * specifies the contents of a single header, footer, or
+ * footnote/endnote separator. If a story is non-
+ * empty, it MUST end with a paragraph mark that serves as a
+ * guard between stories. This paragraph
+ * mark is not considered part of the story contents (that
+ * is, if the story contents require a paragraph
+ * mark themselves, a second paragraph mark MUST be used).
+ * Stories are considered empty if they have no contents and
+ * no guard paragraph mark. Thus, an empty
+ * story is indicated by the beginning CP, as specified in
+ * PlcfHdd, being the same as the next CP in PlcfHdd */
+for (;cp < doc.fib.rgLw97->ccpHdd; ++cp) {
+	_get_char_for_cp(&doc, cp, user_data,
+			headers);
+}
 
 
 #ifdef DEBUG
