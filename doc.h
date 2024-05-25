@@ -2,15 +2,13 @@
  * File              : doc.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 04.11.2022
- * Last Modified Date: 26.01.2024
+ * Last Modified Date: 25.05.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
 #ifndef DOC_H_
 #define DOC_H_
 
-#include "byteorder.h"
-#include <stdbool.h>
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -18,74 +16,106 @@ extern "C"{
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
 #include "cfb.h"
+#include "alloc.h"
+#include "log.h"
+#include "byteorder.h"
 
 #define TXT(...) ({char c[1024]; snprintf(c, 1023, __VA_ARGS__); c[1023]=0; c;})
 
-/*
- * [MS-DOC]: Word (.doc) Binary File Format
- * Specifies the Word (.doc) Binary File Format, which is the binary file format used by Microsoft 
- * Word 97, Microsoft Word 2000, Microsoft Word 2002, and Microsoft Office Word 2003.
+/* [MS-DOC]: Word (.doc) Binary File Format Specifies the
+ * Word (.doc) Binary File Format, which is the binary file
+ * format used by Microsoft Word 97, Microsoft Word 2000,
+ * Microsoft Word 2002, and Microsoft Office Word 2003.
  *
  * Characters 
- * The fundamental unit of a Word binary file is a character. This includes visual characters such as 
- * letters, numbers, and punctuation. It also includes formatting characters such as paragraph marks, 
- * end of cell marks, line breaks, or section breaks. Finally, it includes anchor characters such as 
- * footnote reference characters, picture anchors, and comment anchors. 
- * Characters are indexed by their zero-based Character Position, or CP.  
+ * The fundamental unit of a Word binary file is a
+ * character. This includes visual characters such as
+ * letters, numbers, and punctuation. It also includes
+ * formatting characters such as paragraph marks, end of
+ * cell marks, line breaks, or section breaks. Finally, it
+ * includes anchor characters such as footnote reference
+ * characters, picture anchors, and comment anchors.
+ * Characters are indexed by their zero-based Character
+ * Position, or CP.  
  * 
  * PLCs 
- * Many features of the Word Binary File Format pertain to a range of CPs. For example, 
- * a bookmark is a range of CPs that is named by the document author. As another 
- * example, a field is made up of three control characters with ranges of arbitrary document content 
- * between them. 
- * The Word Binary File Format uses a PLC structure to specify these and other kinds of 
- * ranges of CPs. A PLC is simply a mapping from CPs to other, arbitrary data. 
+ * Many features of the Word Binary File Format pertain to a
+ * range of CPs. For example, a bookmark is a range of CPs
+ * that is named by the document author. As another example,
+ * a field is made up of three control characters with
+ * ranges of arbitrary document content between them.  The
+ * Word Binary File Format uses a PLC structure to specify
+ * these and other kinds of ranges of CPs. A PLC is simply a
+ * mapping from CPs to other, arbitrary data. 
  *
  * Formatting 
- * The formatting of characters, paragraphs, sections, tables, and pictures is specified as a set of 
- * differences in formatting from the default formatting for these objects. Modifications to individual 
- * properties are expressed using a Prl. A Prl is a Single Property Modifier, or Sprm, and an operand 
- * that specifies the new value for the property. Each property has (at least) one unique Sprm that 
- * modifies 
- * it. For example, sprmCFBold modifies the bold formatting of text, and sprmPDxaLeft modifies the 
- * logical left indent of a paragraph. 
- * The final set of properties for text, paragraphs, and tables comes from a hierarchy of styles and 
- * from Prl elements applied directly (for example, by the user selecting some text and clicking the 
- * Bold button in the user interface). Styles allow complex sets of properties to be specified in a 
- * compact way. 
- * They also allow the user to change the appearance of a document without visiting every place in the 
- * document where a change is necessary. The style sheet for a document is specified by a STSH. 
+ * The formatting of characters, paragraphs, sections,
+ * tables, and pictures is specified as a set of differences
+ * in formatting from the default formatting for these
+ * objects. Modifications to individual properties are
+ * expressed using a Prl. A Prl is a Single Property
+ * Modifier, or Sprm, and an operand that specifies the new
+ * value for the property. Each property has (at least) one
+ * unique Sprm that modifies it. For example, sprmCFBold
+ * modifies the bold formatting of text, and sprmPDxaLeft
+ * modifies the logical left indent of a paragraph.  The
+ * final set of properties for text, paragraphs, and tables
+ * comes from a hierarchy of styles and from Prl elements
+ * applied directly (for example, by the user selecting some
+ * text and clicking the Bold button in the user interface).
+ * Styles allow complex sets of properties to be specified
+ * in a compact way.  They also allow the user to change the
+ * appearance of a document without visiting every place in
+ * the document where a change is necessary. The style sheet
+ * for a document is specified by a STSH. 
  *
  * Tables 
- * A table consists of a set of paragraphs that has a particular set of properties applied. There are 
- * special characters that denote the ends of table cells and the ends of table rows, but there are no 
- * characters to denote the beginning of a table cell or the end of the table as a whole. Tables can be 
- * nested inside other tables.
+ * A table consists of a set of paragraphs that has a
+ * particular set of properties applied. There are special
+ * characters that denote the ends of table cells and the
+ * ends of table rows, but there are no characters to denote
+ * the beginning of a table cell or the end of the table as
+ * a whole. Tables can be nested inside other tables.
  * 
  * Pictures 
- * Pictures in the Word Binary File format can be either inline or floating. An inline picture is 
- * represented by a character whose Unicode value is 0x0001 and has sprmCFSpec applied with a value of 
- * 1 and sprmCPicLocation applied to specify the location of the picture data. A floating picture is 
- * represented by an anchor character with a Unicode value of 0x0008 with sprmCFSpec applied with a 
- * value of 1. In addition, floating pictures are referenced by a PlcfSpa structure which contains 
- * additional data about the picture. A floating picture can appear anywhere on the same page as its 
- * anchor. The document author can choose to have the floating picture rearrange the text in various 
- * ways or to leave the text as is.
+ * Pictures in the Word Binary File format can be either
+ * inline or floating. An inline picture is represented by a
+ * character whose Unicode value is 0x0001 and has
+ * sprmCFSpec applied with a value of 1 and sprmCPicLocation
+ * applied to specify the location of the picture data. A
+ * floating picture is represented by an anchor character
+ * with a Unicode value of 0x0008 with sprmCFSpec applied
+ * with a value of 1. In addition, floating pictures are
+ * referenced by a PlcfSpa structure which contains
+ * additional data about the picture. A floating picture can
+ * appear anywhere on the same page as its anchor. The
+ * document author can choose to have the floating picture
+ * rearrange the text in various ways or to leave the text
+ * as is.
  *
  * The FIB 
- * The main stream of the Word Binary File Format begins with a File Information Block, or FIB. The FIB 
- * specifies the locations of all other data in the file. The locations are specified by a pair of 
- * integers, the first of which specifies the location and the second of which specifies the size. 
- * These integers appear in substructures of the FIB such as the FibRgFcLcb97. The location names are 
- * prefixed with fc; the size names are prefixed with lcb.
+ * The main stream of the Word Binary File Format begins
+ * with a File Information Block, or FIB. The FIB specifies
+ * the locations of all other data in the file. The
+ * locations are specified by a pair of integers, the first
+ * of which specifies the location and the second of which
+ * specifies the size.  These integers appear in
+ * substructures of the FIB such as the FibRgFcLcb97. The
+ * location names are prefixed with fc; the size names are
+ * prefixed with lcb.
  *
  * Byte Ordering 
- * Some computer architectures number bytes in a binary word from left to right, which is referred to 
- * as big-endian. The bit diagram for this documentation is big-endian. Other architectures number the 
- * bytes in a binary word from right to left, which is referred to as little-endian. The underlying 
- * file format enumerations, objects, and records are little-endian
+ * Some computer architectures number bytes in a binary word
+ * from left to right, which is referred to as big-endian.
+ * The bit diagram for this documentation is big-endian.
+ * Other architectures number the bytes in a binary word
+ * from right to left, which is referred to as
+ * little-endian. The underlying file format enumerations,
+ * objects, and records are little-endian
  */
 
 /*
@@ -99,29 +129,56 @@ enum {
 	DOC_ERR_ALLOC,  //memory allocation error
 };
 
+/* 2.2.1 Character Position (CP)
+ * A character position, which is also known as a CP, is an
+ * unsigned 32-bit integer that serves as the
+ * zero-based index of a character in the document text.
+ * There is no requirement that the text at
+ * consecutive character positions be at adjacent locations
+ * in the file. The size of each character in the
+ * file also varies. The location and size of each character
+ * in the file can be computed using the algorithm
+ * in section 2.4.1 (Retrieving Text).
+ * Characters include the text of the document, anchors for
+ * objects such as footnotes or textboxes, and
+ * control characters such as paragraph marks and table cell
+ * marks.
+ * Unless otherwise specified by a particular usage, a CP
+ * MUST be greater than or equal to zero and less
+ * than 0x7FFFFFFF. The range of valid character positions
+ * in a particular document is given by the
+ * algorithm in section 2.4.1 (Retrieving Text). */
+
+typedef uint32_t CP; 
+#define CPERROR 0x7FFFFFFF
 
 /*
  * The File Information Block.
- *
- * The Fib structure contains information about the document and specifies the file pointers to various 
- * portions that make up the document.
- * The Fib is a variable length structure. With the exception of the base portion which is fixed in 
- * size, every section is preceded with a count field that specifies the size of the next section.
+ * The Fib structure contains information about the document
+ * and specifies the file pointers to various portions that
+ * make up the document.  The Fib is a variable length
+ * structure. With the exception of the base portion which
+ * is fixed in size, every section is preceded with a count
+ * field that specifies the size of the next section.
  *
  * base (32 bytes): The FibBase. 
  * 
- * csw (2 bytes): An unsigned integer that specifies the count of 16-bit values corresponding to fibRgW 
+ * csw (2 bytes): An unsigned integer that specifies the
+ * count of 16-bit values corresponding to fibRgW 
  * that follow. MUST be 0x000E. 
  * 
  * fibRgW (28 bytes): The FibRgW97. 
  * 
- * cslw (2 bytes): An unsigned integer that specifies the count of 32-bit values corresponding
+ * cslw (2 bytes): An unsigned integer that specifies the
+ * count of 32-bit values corresponding
  * to fibRgLw that follow. MUST be 0x0016. 
  *
  * fibRgLw (88 bytes): The FibRgLw97. 
  *
- * cbRgFcLcb (2 bytes): An unsigned integer that specifies the count of 64-bit values corresponding to 
- * fibRgFcLcbBlob that follow. This MUST be one of the following values, depending on the value of 
+ * cbRgFcLcb (2 bytes): An unsigned integer that specifies
+ * the count of 64-bit values corresponding to 
+ * fibRgFcLcbBlob that follow. This MUST be one of the
+ * following values, depending on the value of 
  * nFib.
  */
 struct nFib2cbRgFcLcb {
@@ -137,16 +194,26 @@ static const struct nFib2cbRgFcLcb nFib2cbRgFcLcbTable[] = {
 	{0x0112, 0x00B7}, 
 };
 
-static int nFib2cbRgFcLcb_compare(const void *key, const void *value) {
-    const struct nFib2cbRgFcLcb *cp1 = (const struct nFib2cbRgFcLcb *)key;
-    const struct nFib2cbRgFcLcb *cp2 = (const struct nFib2cbRgFcLcb *)value;
+static int nFib2cbRgFcLcb_compare(
+		const void *key, const void *value) 
+{
+    const struct nFib2cbRgFcLcb *cp1 = 
+			(const struct nFib2cbRgFcLcb *)key;
+    const struct nFib2cbRgFcLcb *cp2 = 
+			(const struct nFib2cbRgFcLcb *)value;
     return cp1->nFib - cp2->nFib;
 }
 
-static uint16_t cbRgFcLcb_get(uint16_t nFib){
-    struct nFib2cbRgFcLcb *result = (struct nFib2cbRgFcLcb *)bsearch(&nFib, nFib2cbRgFcLcbTable,
-            sizeof(nFib2cbRgFcLcbTable)/sizeof(nFib2cbRgFcLcbTable[0]),
-            sizeof(nFib2cbRgFcLcbTable[0]), nFib2cbRgFcLcb_compare);
+static uint16_t cbRgFcLcb_get(uint16_t nFib)
+{
+    struct nFib2cbRgFcLcb *result = 
+			(struct nFib2cbRgFcLcb *)bsearch(
+					&nFib, 
+					nFib2cbRgFcLcbTable,
+          sizeof(nFib2cbRgFcLcbTable)/
+								 sizeof(nFib2cbRgFcLcbTable[0]),
+          sizeof(nFib2cbRgFcLcbTable[0]), 
+					nFib2cbRgFcLcb_compare);
 	if (result)
 		return result->cbRgFcLcb;
 	return 0;
@@ -155,12 +222,15 @@ static uint16_t cbRgFcLcb_get(uint16_t nFib){
 /*
  * fibRgFcLcbBlob (variable): The FibRgFcLcb. 
  *
- * cswNew (2 bytes): An unsigned integer that specifies the count of 16-bit values corresponding to 
- * fibRgCswNew that follow. This MUST be one of the following values, depending on the value of nFib. 
+ * cswNew (2 bytes): An unsigned integer that specifies the
+ * count of 16-bit values corresponding to 
+ * fibRgCswNew that follow. This MUST be one of the
+ * following values, depending on the value of nFib. 
  */
 
 /*
- * fibRgCswNew (variable): If cswNew is nonzero, this is fibRgCswNew. Otherwise, it is not present
+ * fibRgCswNew (variable): If cswNew is nonzero, this is
+ * fibRgCswNew. Otherwise, it is not present
  * in the file. 
  */
 struct nFib2cswNew {
@@ -176,16 +246,26 @@ static const struct nFib2cswNew nFib2cswNewTable[] = {
 	{0x0112, 0x0005}, 
 };
 
-static int nFib2cswNew_compare(const void *key, const void *value) {
-    const struct nFib2cswNew *cp1 = (const struct nFib2cswNew *)key;
-    const struct nFib2cswNew *cp2 = (const struct nFib2cswNew *)value;
+static int nFib2cswNew_compare(
+		const void *key, const void *value) 
+{
+    const struct nFib2cswNew *cp1 = 
+			(const struct nFib2cswNew *)key;
+    const struct nFib2cswNew *cp2 = 
+			(const struct nFib2cswNew *)value;
     return cp1->nFib - cp2->nFib;
 }
 
-static uint16_t cswNew_get(uint16_t nFib){
-    struct nFib2cswNew *result = (struct nFib2cswNew *)bsearch(&nFib, nFib2cswNewTable,
-            sizeof(nFib2cswNewTable)/sizeof(nFib2cswNewTable[0]),
-            sizeof(nFib2cswNewTable[0]), nFib2cswNew_compare);
+static uint16_t cswNew_get(uint16_t nFib)
+{
+    struct nFib2cswNew *result = 
+			(struct nFib2cswNew *)bsearch(
+					&nFib, 
+					nFib2cswNewTable,
+          sizeof(nFib2cswNewTable)/
+								 sizeof(nFib2cswNewTable[0]),
+          sizeof(nFib2cswNewTable[0]), 
+					nFib2cswNew_compare);
 	if (result)
 		return result->cswNew;
 	return 0;
@@ -198,16 +278,27 @@ static uint16_t cswNew_get(uint16_t nFib){
 typedef struct FibBase 
 { 
     // Header 
-    uint16_t   wIdent; //(2 bytes): An unsigned integer that specifies that this is a Word Binary File. 
-					   //This value MUST be 0xA5EC. 
-	uint16_t   nFib;   //(2 bytes): An unsigned integer that specifies the version number of the file 
-					   //format used. Superseded by FibRgCswNew.nFibNew if it is present. 
-					   //This value SHOULD be 0x00C1.
-					   //A special empty document is installed with Word 97, Word 2000, Word 2002, 
-					   //and Office Word 2003 to allow "Create New Word Document" from the operating 
-					   //system. This document has an nFib of 0x00C0. In addition the BiDi build of 
-					   //Word 97 differentiates its documents by saving 0x00C2 as the nFib. In both 
-					   //cases treat them as if they were 0x00C1.
+    uint16_t   wIdent; //(2 bytes): An unsigned integer 
+											 //that specifies that this is a 
+											 //Word Binary File. 
+											 //This value MUST be 0xA5EC. 
+	uint16_t   nFib;     //(2 bytes): An unsigned integer 
+											 //that specifies the version number 
+											 //of the file format used. 
+											 //Superseded by FibRgCswNew.nFibNew 
+											 //if it is present. 
+											 //This value SHOULD be 0x00C1.
+					             //A special empty document is 
+											 //installed with Word 97, Word 2000, 
+											 //Word 2002, and Office Word 2003 
+											 //to allow "Create New Word Document" 
+											 //from the operating system. This 
+											 //document has an nFib of 0x00C0. 
+											 //In addition the BiDi build of 
+											 //Word 97 differentiates its 
+											 //documents by saving 0x00C2 as the 
+											 //nFib. In both cases treat them as 
+											 //if they were 0x00C1.
 	uint16_t  unused;  //(2 bytes)
 	uint16_t  lid;	   //(2 bytes): A LID that specifies the install language of the application that 
 					   //is producing the document. If nFib is 0x00D9 or greater, then any East Asian 
@@ -2358,42 +2449,50 @@ static uint16_t FcCompressedSpecialChar_get(uint16_t nFib){
  * The FcCompressed structure specifies the location of text in the WordDocument Stream.
  */
 struct FcCompressed {
-	uint32_t fc; //fc (30 bits): An unsigned integer that specifies an offset in the 
-				 //WordDocument Stream where the text starts. If fCompressed is zero, the text 
-				 //is an array of 16-bit Unicode characters starting at offset fc. If 
-				 //fCompressed is 1, the text starts at offset fc/2 and is an array of 8-bit 
-				 //Unicode characters, except for the values which are mapped to Unicode 
-				 //characters as follows
-				 //0x82 0x201A 
-				 //0x83 0x0192 
-				 //0x84 0x201E 
-				 //0x85 0x2026 
-				 //0x86 0x2020 
-				 //0x87 0x2021 
-				 //0x88 0x02C6 
-				 //0x89 0x2030 
-				 //0x8A 0x0160 
-				 //0x8B 0x2039 
-				 //0x8C 0x0152 
-				 //0x91 0x2018 
-				 //0x92 0x2019 
-				 //0x93 0x201C 
-				 //0x94 0x201D 
-				 //0x95 0x2022 
-				 //0x96 0x2013 
-				 //0x97 0x2014 
-				 //0x98 0x02DC 
-				 //0x99 0x2122 
-				 //0x9A 0x0161 
-				 //0x9B 0x203A 
-				 //0x9C 0x0153 
-				 //0x9F 0x0178
-				 //A - fCompressed (1 bit): A bit that specifies whether the text is compressed.
-				 //B - r1 (1 bit): This bit MUST be zero, and MUST be ignored.
+	uint32_t fc; //fc (30 bits): An unsigned integer that 
+							 //specifies an offset in the 
+							 //WordDocument Stream where the text starts. 
+							 //If fCompressed is zero, the text 
+							 //is an array of 16-bit Unicode characters 
+							 //starting at offset fc. If 
+							 //fCompressed is 1, the text starts at 
+							 //offset fc/2 and is an array of 8-bit 
+							 //Unicode characters, except for the values 
+							 //which are mapped to Unicode 
+							 //characters as follows
+							 //0x82 0x201A 
+							 //0x83 0x0192 
+							 //0x84 0x201E 
+							 //0x85 0x2026 
+							 //0x86 0x2020 
+							 //0x87 0x2021 
+							 //0x88 0x02C6 
+							 //0x89 0x2030 
+							 //0x8A 0x0160 
+							 //0x8B 0x2039 
+							 //0x8C 0x0152 
+							 //0x91 0x2018 
+							 //0x92 0x2019 
+							 //0x93 0x201C 
+							 //0x94 0x201D 
+							 //0x95 0x2022 
+							 //0x96 0x2013 
+							 //0x97 0x2014 
+							 //0x98 0x02DC 
+							 //0x99 0x2122 
+							 //0x9A 0x0161 
+							 //0x9B 0x203A 
+							 //0x9C 0x0153 
+							 //0x9F 0x0178
+							 //A - fCompressed (1 bit): A bit that 
+							 //specifies whether the text is compressed.
+							 //B - r1 (1 bit): This bit MUST be zero, 
+							 //and MUST be ignored.
 };
 static bool FcCompressed(struct FcCompressed fc){
-	///* TODO: byte order */
-	if ((fc.fc & 0x40000000) == 0x40000000) //if compressed - then ANSI
+	/* TODO: byte order */
+	if ((fc.fc & 0x40000000) == 0x40000000) 
+							 //if compressed - then ANSI
 		return true;
 	return false;
 };
@@ -2470,6 +2569,127 @@ struct Clx {
 	struct Pcdt *Pcdt; //(variable): A Pcdt.
 };
 
+/* The PnFkpPapx structure specifies the offset of a PapxFkp 
+ * in the WordDocument Stream.*/
+typedef uint32_t PnFkpPapx;
+/* pn (22 bits): An unsigned integer that specifies the 
+ * offset in the WordDocument Stream of a PapxFkp structure. 
+ * The PapxFkp structure begins at an offset of pn×512.
+ * unused (10 bits): This value is undefined and MUST be 
+ * ignored. */
+static uint32_t pnFkpPapx_pn(PnFkpPapx p)
+{
+	return p & 0x3FFFFF;
+}
+
+struct PlcBtePapx {
+ uint32_t *aFc; // An array of unsigned integers. Each
+								// element in this array specifies an offset
+								// in the
+								// WordDocument stream. The elements of aFC
+								// MUST be sorted in ascending order, and
+								// there MUST
+								// NOT be any duplicate entries	
+ PnFkpPapx *aPnBtePapx;
+                // An array of PnFkpPapx. The ith entry in
+								// aPnBtePapx is a PnFkpPapx that
+								// specifies the properties of all
+								// paragraphs, table rows, and table cells
+								// whose last character occurs
+								// at an offset in the WordDocument stream
+								// larger than or equal to aFC[i] but
+								// smaller than
+								// aFC[i+1]; aPnBtePapx MUST contain one
+								// less entry than aFC 
+};
+static struct PlcBtePapx * plcbtePapx_get(
+		FILE *fp, uint32_t offset, uint32_t size, int *naFc)
+{
+	// get PlcBtePapx data
+	void * p = 
+		MALLOC(size, ERR("malloc"); exit(ENOMEM)); 
+	fseek(fp, offset, SEEK_SET);
+	fread(p, size, 1, fp);
+
+	// get nuber of aFc;
+	int n = (size/4 - 1)/2 + 1;
+
+	struct PlcBtePapx *plcbtePapx = 
+		(struct PlcBtePapx *)MALLOC(
+				sizeof(struct PlcBtePapx), 
+				ERR("malloc"); exit(ENOMEM));
+
+	plcbtePapx->aFc = (uint32_t *)p;	
+	plcbtePapx->aPnBtePapx = (uint32_t *)(p) + n;
+	if (naFc)
+		*naFc = n;
+
+	return plcbtePapx;
+}
+
+/* The PapxFkp structure maps paragraphs, table rows, and
+ * table cells to their properties. A PapxFkp
+ * structure is 512 bytes in size, with cpara in the last
+ * byte. The elements of rgbx specify the locations
+ * of PapxInFkp structures that start at offsets between the
+ * end of rgbx and cpara within this
+ * PapxFkp structure. */
+struct PapxFkp {
+	uint32_t *rgfc;  // An array of 4-byte unsigned integers.
+									 // Each element of this array specifies
+									 // an offset
+									 // in the WordDocument Stream where a
+									 // paragraph of text begins, or where an
+									 // end of row mark
+									 // exists. This array MUST be sorted in
+									 // ascending order and MUST NOT contain
+									 // duplicates. Each
+									 // paragraph begins immediately after the
+									 // end of the previous paragraph. The
+									 // count of elements that
+									 // this array contains is cpara
+									 // incremented by 1. The last element
+									 // does not specify the beginning of
+									 // a paragraph; instead it specifies the
+									 // end of the last paragraph.
+									 //
+	uint32_t *rgbx;  // An array of BxPap, followed by
+									 // PapxInFkp structures. The elements of
+									 // this array,
+									 // which has cpara elements and parallels
+									 // rgfc, each specify the offset of one
+									 // of the PapxInFkp
+									 // structures in this PapxFkp structure.
+									 // Each PapxInFkp specifies the paragraph
+									 // properties for the paragraph at the
+									 // corresponding offset
+									 // in rgfc or the table properties for
+									 // the table row whose end of row mark is
+									 // located at the
+									 // corresponding offset in rgfc. 
+	uint8_t  *cpara; // An unsigned integer that specifies the
+									 // total number of paragraphs, table
+									 // rows, or
+									 // table cells for which this PapxFkp
+									 // structure specifies formatting. This
+									 // field occupies the last byte
+};
+
+static struct PapxFkp * papxFkp_get(
+		FILE *fp, uint32_t offset)
+{
+	void *p = MALLOC(512, ERR("malloc"); exit(ENOMEM));
+	fseek(fp, offset, SEEK_SET);
+	fread(p, 512, 1, fp);
+
+	struct PapxFkp *s =	(struct PapxFkp *)MALLOC(
+			sizeof(struct PapxFkp), 
+			ERR("malloc"); exit(ENOMEM));
+	s->cpara = &((uint8_t *)p)[511];
+	s->rgfc = (uint32_t *)p;
+	s->rgbx = &(((uint32_t *)p)[*s->cpara + 1]);
+	return s;
+}
 
 /*
  * FIB
@@ -2479,19 +2699,29 @@ struct Clx {
 typedef struct Fib 
 {
 	FibBase *base;        //MUST be present and has fixed size
-	uint16_t csw;         //(2 bytes): An unsigned integer that specifies the count of 16-bit 
-						  //values corresponding to fibRgW that follow. MUST be 0x000E. 
+	uint16_t csw;         //(2 bytes): An unsigned integer that 
+												//specifies the count of 16-bit 
+												//values corresponding to fibRgW that 
+												//follow. MUST be 0x000E. 
 	FibRgW97 *rgW97;      //Fib.csw * 2 bytes
-    uint16_t cslw;        //(2 bytes): An unsigned integer that specifies the count of 32-bit 
-						  //values corresponding to fibRgLw that follow. MUST be 0x0016. 
+    uint16_t cslw;      //(2 bytes): An unsigned integer 
+												//that specifies the count of 32-bit 
+												//values corresponding to fibRgLw 
+												//that follow. MUST be 0x0016. 
 	FibRgLw97 *rgLw97;    //Fib.cslw * 4 bytes
-	uint16_t cbRgFcLcb;   //(2 bytes): An unsigned integer that specifies the count of 64-bit 
-						  //values corresponding to fibRgFcLcbBlob that follow. This MUST be one 
-						  //of the following values, depending on the value of nFib.
+	uint16_t cbRgFcLcb;   //(2 bytes): An unsigned integer 
+												//that specifies the count of 64-bit 
+												//values corresponding to 
+												//fibRgFcLcbBlob that follow. This 
+												//MUST be one of the following values,
+												//depending on the value of nFib.
 	uint32_t *rgFcLcb;    //Fib.cbRgFcLcb * 8 bytes
-	uint16_t cswNew;      //(2 bytes): An unsigned integer that specifies the count of 16-bit 
-						  //values corresponding to fibRgCswNew that follow. This MUST be one of 
-						  //the following values, depending on the value of nFib. 
+	uint16_t cswNew;      //(2 bytes): An unsigned integer 
+												//that specifies the count of 16-bit 
+												//values corresponding to 
+												//fibRgCswNew that follow. This MUST 
+												//be one of the following values, 
+												//depending on the value of nFib. 
 	FibRgCswNew *rgCswNew;
 } Fib;
 
@@ -2507,6 +2737,8 @@ typedef struct cfb_doc
 	Fib  fib;             //File information block
 	struct Clx clx;       //clx data
 	bool biteOrder;				//need to change byte order
+	struct PlcBtePapx *plcbtePapx;
+	int plcbtePapxNaFc;   // number of aFc in plcbtePapx
 } cfb_doc_t;
 
 
@@ -3043,6 +3275,22 @@ static int _clx_init(cfb_doc_t *doc)
 	return 0;
 }
 
+static int _doc_plcBtePapx_init(cfb_doc_t *doc){
+	FibRgFcLcb97 *fibRgFcLcb97 = 
+		(FibRgFcLcb97 *)(doc->fib.rgFcLcb);
+	doc->plcbtePapx = 
+			plcbtePapx_get(
+					doc->Table, 
+					fibRgFcLcb97->fcPlcfBtePapx,
+					fibRgFcLcb97->lcbPlcfBtePapx, 
+					&doc->plcbtePapxNaFc); 
+	if (!doc->plcbtePapx){
+		ERR("can't read PlcBtePapx");
+		return -1;
+	}
+	return 0;
+}
+
 static int _doc_init(cfb_doc_t *doc, struct cfb *cfb){
 #ifdef DEBUG
 	LOG("start cfb_doc_init\n");
@@ -3071,9 +3319,13 @@ static int _doc_init(cfb_doc_t *doc, struct cfb *cfb){
 		return DOC_ERR_FILE;
 	}
 
-		
 	//Read the Clx from the Table Stream
 	ret = _clx_init(doc);
+	if (ret)
+		return ret;	
+
+	// get PlcBtePapx
+	ret = _doc_plcBtePapx_init(doc);
 	if (ret)
 		return ret;	
 
@@ -3189,6 +3441,271 @@ static void _get_text(cfb_doc_t *doc, struct PlcPcd *PlcPcd,
 	}
 }
 
+/* 2.4.2 Determining Paragraph Boundaries
+ * This section specifies how to find the beginning and end 
+ * character positions of the paragraph that contains a 
+ * given character position. The character at the end 
+ * character position of a paragraph MUST be a paragraph 
+ * mark, an end-of-section character, a cell mark, or a 
+ * TTP mark (See Overview of Tables). Negative character 
+ * positions are not valid. */ 
+
+/* To find the character position of the first character 
+ * in the paragraph that contains a given character 
+ * position cp :*/ 
+/* 1. Follow the algorithm from Retrieving Text up to and 
+ * including step 3 to find i. Also remember the 
+ * FibRgFcLcb97 and PlcPcd found in step 1 of Retrieving 
+ * Text. If the algorithm from Retrieving Text specifies 
+ * that cp is invalid, leave the algorithm. */
+static CP _first_cp_in_paragraph(
+		cfb_doc_t *doc, uint32_t cp)
+{
+	CP fcp = CPERROR;
+	struct PapxFkp *papxFkp = NULL;
+
+	FibRgFcLcb97 *fibRgFcLcb97 = (FibRgFcLcb97 *)(doc->fib.rgFcLcb);
+	struct PlcPcd *plcPcd = &(doc->clx.Pcdt->PlcPcd);
+
+	int i = 0;
+		while (plcPcd->aCp[i] <= cp)
+			i++;
+		i--;	
+
+  while(1){
+/* 2. Let pcd be PlcPcd.aPcd[i]. */
+		struct Pcd *pcd = &(plcPcd->aPcd[i]);
+
+/* 3. Let fcPcd be Pcd.fc.fc. Let fc be 
+ * fcPcd + 2(cp – PlcPcd.aCp[i]). If Pcd.fc.fCompressed is 
+ * one, set fc to fc / 2, and set fcPcd to fcPcd/2. */
+		//uint32_t fcPcd = FcValue(pcd->fc);
+		uint32_t fcPcd = FcValue(pcd->fc);
+		uint32_t fc = fcPcd + 2*(cp - plcPcd->aCp[i]); 
+		if (FcCompressed(pcd->fc)){
+			fcPcd /= 2;
+			fc /= 2;
+		}
+
+/* 4. Read a PlcBtePapx at offset FibRgFcLcb97.fcPlcfBtePapx 
+ * in the Table Stream, and of size FibRgFcLcb97.lcbPlcfBtePapx.
+ * Let fcLast be the last element of plcbtePapx.aFc. */
+	 
+		uint32_t fcLast = 
+			doc->plcbtePapx->aFc[doc->plcbtePapxNaFc-1];
+		uint32_t fcFirst;
+
+/* If fcLast is less than or equal to fc, examine fcPcd. 
+ * If fcLast is less than fcPcd, go to step 8. Otherwise, 
+ * set fc to fcLast. If Pcd.fc.fCompressed is one, set 
+ * fcLast to fcLast / 2. Set fcFirst to fcLast and go 
+ * to step 7. */
+		if (fcLast <= fc) {
+			if (fcLast < fcPcd){
+				// goto 8
+				goto _first_cp_in_paragraph_8;
+			} else {
+					fc = fcLast;
+					if (FcCompressed(pcd->fc))
+						fcLast /= 2;
+					fcFirst = fcLast;
+					// goto 7
+					goto _first_cp_in_paragraph_7;
+			}
+		}
+/* 5. Find the largest j such that plcbtePapx.aFc[j] ≤ fc.
+ * Read a PapxFkp at offset
+ * aPnBtePapx[j].pn *512 in the WordDocument Stream. */
+		int j;
+		for (j=0; doc->plcbtePapx->aFc[j] <= fc; )
+			j++;	
+		j--;
+
+		papxFkp = papxFkp_get(
+				doc->WordDocument, 
+				pnFkpPapx_pn(
+					doc->plcbtePapx->aPnBtePapx[j]) * 512);
+
+/* 6. Find the largest k such that PapxFkp.rgfc[k] ≤ fc.
+ * If the last element of PapxFkp.rgfc is less
+ * than or equal to fc, then cp is outside the range of
+ * character positions in this document, and is
+ * not valid. Let fcFirst be PapxFkp.rgfc[k].*/
+		int k;
+		for (k=0; papxFkp->rgfc[k] <= fc; )
+			k++;	
+		k--;
+		
+		if (papxFkp->rgfc[*papxFkp->cpara] <= fc){
+			ERR("last element of PapxFkp.rgfc is less"
+					" than or equal to fc: cp is outside the"
+					" range of character positions in this document");
+			return CPERROR;
+		}
+		fcFirst = papxFkp->rgfc[k];
+
+_first_cp_in_paragraph_7:
+/* 7. If fcFirst is greater than fcPcd, then let dfc be
+ * (fcFirst – fcPcd). If Pcd.fc.fCompressed is
+ * zero, then set dfc to dfc / 2. The first character of
+ * the paragraph is at character position
+ * PlcPcd.aCp[i] + dfc. Leave the algorithm. */
+		if (fcFirst > fcPcd){
+			uint32_t dfc = fcFirst - fcPcd;
+			if (!FcCompressed(pcd->fc))
+				dfc /= 2;
+			fcp = plcPcd->aCp[i] + dfc;
+			break;
+		}
+
+_first_cp_in_paragraph_8:
+/* 8. If PlcPcd.aCp[i] is 0, then the first character of
+ * the paragraph is at character position 0. Leave
+ * the algorithm */
+		if (plcPcd->aCp[i] == 0){
+			fcp = 0;
+			break;
+		}
+
+/* 9. Set cp to PlcPcd.aCp[i]. Set i to i - 1. 
+ * Go to step 2; */
+		cp = plcPcd->aCp[i];
+		i--;
+	
+		if (papxFkp)
+			free(papxFkp);
+		papxFkp = NULL;
+	}
+
+	if (papxFkp)
+		free(papxFkp);
+	return fcp;
+}
+
+/* To find the character position of the last character in
+ * the paragraph that contains a given character
+ * position cp: */
+
+/* 1. Follow the algorithm from Retrieving Text up to and
+ * including step 3 to find i. Also remember the
+ * FibRgFcLcb97, and PlcPcd found in step 1 of Retrieving
+ * Text. If the algorithm from Retrieving
+ * Text specifies that cp is invalid, leave the algorithm.
+ */
+static CP _last_cp_in_paragraph(
+		cfb_doc_t *doc, uint32_t cp)
+{
+	CP lcp = CPERROR;
+	struct PapxFkp *papxFkp = NULL;
+	
+	FibRgFcLcb97 *fibRgFcLcb97 = (FibRgFcLcb97 *)(doc->fib.rgFcLcb);
+	struct PlcPcd *plcPcd = &(doc->clx.Pcdt->PlcPcd);
+	
+	int i;
+	for(i=0; plcPcd->aCp[i] <= cp;)
+		i++;
+	i--;	
+
+	while(1){
+/* 2. Let pcd be PlcPcd.aPcd[i]. */
+		struct Pcd *pcd = &(plcPcd->aPcd[i]);
+
+/* 3. Let fcPcd be Pcd.fc.fc. Let fc be fcPcd + 2(cp –
+ * PlcPcd.aCp[i]). Let fcMac be fcPcd +
+ * 2(PlcPcd.aCp[i+1] - PlcPcd.aCp[i]). If Pcd.fc.fCompressed
+ * is one, set fc to fc/2, set fcPcd to
+ * fcPcd /2 and set fcMac to fcMac/2 */
+
+		uint32_t fcPcd = FcValue(pcd->fc);
+		uint32_t fc = fcPcd + 2 * (cp - plcPcd->aCp[i]);
+		uint32_t fcMac = fcPcd + 2 * (plcPcd->aCp[i+1] - plcPcd->aCp[i]);
+		if (FcCompressed(pcd->fc)){
+			fc /= 2;
+			fcPcd /= 2;
+			fcMac /= 2;
+		}
+
+/* 4. Read a PlcBtePapx at offset FibRgFcLcb97.fcPlcfBtePapx
+ * in the Table Stream, and of size
+ * FibRgFcLcb97.lcbPlcfBtePapx. Then find the largest j such
+ * that plcbtePapx.aFc[j] ≤ fc. If the
+ * last element of plcbtePapx.aFc is less than or equal to
+ * fc, then go to step 7. Read a PapxFkp at
+ * offset aPnBtePapx[j].pn *512 in the WordDocument Stream */
+		
+		printf("fc: %d\n", fc);
+		printf("fcPcd: %d\n", fcPcd);
+		printf("fcMac: %d\n", fcMac);
+
+		int j;
+		for (j=0; doc->plcbtePapx->aFc[j] <= fc; )
+			j++;	
+		j--;
+		
+		printf("J: %d\n", j);
+		
+		printf("last element of plcbtePapx.aFc: %d\n", doc->plcbtePapx->aFc[doc->plcbtePapxNaFc-1]);
+
+		if (doc->plcbtePapx->aFc[doc->plcbtePapxNaFc-1] <= fc){
+			// goto 7
+			goto _last_cp_in_paragraph_7;
+		}
+		
+		papxFkp = papxFkp_get(
+				doc->WordDocument, 
+				pnFkpPapx_pn(
+					doc->plcbtePapx->aPnBtePapx[j]) * 512);
+
+/* 5. Find largest k such that PapxFkp.rgfc[k] ≤ fc. If the
+ * last element of PapxFkp.rgfc is less than
+ * or equal to fc, then cp is outside the range of character
+ * positions in this document, and is not
+ * valid. Let fcLim be PapxFkp.rgfc[k+1]. */
+		int k;
+		for (k=0; papxFkp->rgfc[k] <= fc; )
+			k++;	
+		k--;
+		
+		printf("K: %d\n", k);
+		printf("papxFkp->rgfc[k]: %d\n", papxFkp->rgfc[k]);
+		printf("papxFkp-: %d\n", papxFkp->rgfc[k]);
+		
+		if (papxFkp->rgfc[*papxFkp->cpara] <= fc){
+			ERR("last element of PapxFkp.rgfc is less"
+					" than or equal to fc: cp is outside the"
+					" range of character positions in this document");
+			return CPERROR;
+		}
+		uint32_t fcLim = papxFkp->rgfc[k+1];
+
+/* 6. If fcLim ≤ fcMac, then let dfc be (fcLim – fcPcd). If
+ * Pcd.fc.fCompressed is zero, then set dfc
+ * to dfc / 2. The last character of the paragraph is at
+ * character position PlcPcd.aCp[i] + dfc – 1.
+ * Leave the algorithm. */
+		if (fcLim <= fcMac){
+			uint32_t dfc = fcLim - fcMac;
+			if (!FcCompressed(pcd->fc)){
+				dfc /= 2;
+				lcp = plcPcd->aCp[i] + dfc - 1;
+				break;
+			}
+		}
+/* 7. Set cp to PlcPcd.aCp[i+1]. Set i to i + 1. 
+ * Go to step 2.*/
+_last_cp_in_paragraph_7:
+		cp = plcPcd->aCp[i+1];
+		i++;
+		if (papxFkp)
+			free(papxFkp);
+		papxFkp = NULL;
+	}
+
+	if (papxFkp)
+		free(papxFkp);
+	return lcp;
+}
+	
 static void _get_char_for_cp(cfb_doc_t *doc, uint32_t cp,
 		void *user_data,
 		int (*callback)(void *user_data, int ch)		
@@ -3196,12 +3713,14 @@ static void _get_char_for_cp(cfb_doc_t *doc, uint32_t cp,
 {
 	struct PlcPcd *PlcPcd = &(doc->clx.Pcdt->PlcPcd);
 
-/*
- * The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
- * PlcPcd.aCp[i] ≤ cp. As with all Plcs, the elements of PlcPcd.aCp are sorted in ascending order.
- * Recall from the definition of a Plc that the aCp array has one more element than the aPcd array.
- * Thus, if the last element of PlcPcd.aCp is less than or equal to cp, cp is outside the range of
- * valid character positions in this document
+/* The Clx contains a Pcdt, and the Pcdt contains a PlcPcd.
+ * Find the largest i such that PlcPcd.aCp[i] ≤ cp. As with
+ * all Plcs, the elements of PlcPcd.aCp are sorted in
+ * ascending order.  Recall from the definition of a Plc
+ * that the aCp array has one more element than the aPcd
+ * array.  Thus, if the last element of PlcPcd.aCp is less
+ * than or equal to cp, cp is outside the range of valid
+ * character positions in this document
  */
 		int i = 0;
 		while (PlcPcd->aCp[i] <= cp)
@@ -3302,84 +3821,6 @@ static void _get_char_for_cp(cfb_doc_t *doc, uint32_t cp,
 	}
 }
 
-/*
- * Retrieving Text
- * The following algorithm specifies how to find the text at a particular character position 
- * (cp). Negative character positions are not valid.
- * 1. Read the FIB from offset zero in the WordDocument Stream.
- * 2. All versions of the FIB contain exactly one FibRgFcLcb97, though it can be nested in a 
- * larger structure. FibRgFcLcb97.fcClx specifies the offset in the Table Stream of a Clx. 
- * FibRgFcLcb97.lcbClx specifies the size, in bytes, of that Clx. Read the Clx from the Table 
- * Stream.
- * 3. The Clx contains a Pcdt, and the Pcdt contains a PlcPcd. Find the largest i such that 
- * PlcPcd.aCp[i] ≤ cp. As with all Plcs, the elements of PlcPcd.aCp are sorted in ascending 
- * order. Recall from the definition of a Plc that the aCp array has one more element than the 
- * aPcd array. Thus, if the last element of PlcPcd.aCp is less than or equal to cp, cp is 
- * outside the range of valid character positions in this document.
- * 4. PlcPcd.aPcd[i] is a Pcd. Pcd.fc is an FcCompressed that specifies the location in the 
- * WordDocument Stream of the text at character position PlcPcd.aCp[i].
- * 5. If FcCompressed.fCompressed is zero, the character at position cp is a 16-bit Unicode 
- * character at offset FcCompressed.fc + 2(cp - PlcPcd.aCp[i]) in the WordDocument Stream. This 
- * is to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.fc 
- * in the WordDocument Stream and each character occupies two bytes.
- * 6. If FcCompressed.fCompressed is 1, the character at position cp is an 8-bit ANSI character 
- * at offset (FcCompressed.fc / 2) + (cp - PlcPcd.aCp[i]) in the WordDocument Stream, unless it 
- * is one of the special values in the table defined in the description of FcCompressed.fc. This 
- * is to say that the text at character position PlcPcd.aCP[i] begins at offset FcCompressed.
- * fc / 2 in the WordDocument Stream and each character occupies one byte.
- *
- * Determining Paragraph Boundaries
- * This section specifies how to find the beginning and end character positions of the paragraph 
- * that contains a given character position. The character at the end character position of a 
- * paragraph MUST be a paragraph mark, an end-of-section character, a cell mark, or a TTP mark 
- * (See Overview of Tables). Negative character positions are not valid.
- * To find the character position of the first character in the paragraph that contains a given 
- * character position cp:
- * 1. Follow the algorithm from Retrieving Text up to and including step 3 to find i. Also 
- * remember the FibRgFcLcb97 and PlcPcd found in step 1 of Retrieving Text. If the algorithm 
- * from Retrieving Text specifies that cp is invalid, leave the algorithm.
- * 2. Let pcd be PlcPcd.aPcd[i].
- * 3. Let fcPcd be Pcd.fc.fc. Let fc be fcPcd + 2(cp – PlcPcd.aCp[i]). If Pcd.fc.fCompressed is 
- * one, set fc to fc / 2, and set fcPcd to fcPcd/2.
- * 4. Read a PlcBtePapx at offset FibRgFcLcb97.fcPlcfBtePapx in the Table Stream, and of size 
- * FibRgFcLcb97.lcbPlcfBtePapx. Let fcLast be the last element of plcbtePapx.aFc. If fcLast is 
- * less than or equal to fc, examine fcPcd. If fcLast is less than fcPcd, go to step 8. 
- * Otherwise, set fc to fcLast. If Pcd.fc.fCompressed is one, set fcLast to fcLast / 2. Set 
- * fcFirst to fcLast and go to step 7.
- * 5. Find the largest j such that plcbtePapx.aFc[j] ≤ fc. Read a PapxFkp at offset 
- * aPnBtePapx[j].pn *512 in the WordDocument Stream.
- * 6. Find the largest k such that PapxFkp.rgfc[k] ≤ fc. If the last element of PapxFkp.rgfc is 
- * less than or equal to fc, then cp is outside the range of character positions in this 
- * document, and is not valid. Let fcFirst be PapxFkp.rgfc[k].
- * 7. If fcFirst is greater than fcPcd, then let dfc be (fcFirst – fcPcd). If Pcd.fc.fCompressed 
- * is zero, then set dfc to dfc / 2. The first character of the paragraph is at character 
- * position PlcPcd.aCp[i] + dfc. Leave the algorithm.
- * 8. If PlcPcd.aCp[i] is 0, then the first character of the paragraph is at character position 
- * 0. Leave the algorithm.
- * 9. Set cp to PlcPcd.aCp[i]. Set i to i - 1. Go to step 2.
- *
- * To find the character position of the last character in the paragraph that contains a given 
- * character position cp:
- * 1. Follow the algorithm from Retrieving Text up to and including step 3 to find i. Also 
- * remember the FibRgFcLcb97, and PlcPcd found in step 1 of Retrieving Text. If the algorithm 
- * from Retrieving Text specifies that cp is invalid, leave the algorithm.
- * 2. Let pcd be PlcPcd.aPcd[i].
- * 3. Let fcPcd be Pcd.fc.fc. Let fc be fcPcd + 2(cp – PlcPcd.aCp[i]). Let fcMac be fcPcd + 
- * 2(PlcPcd.aCp[i+1] - PlcPcd.aCp[i]). If Pcd.fc.fCompressed is one, set fc to fc/2, set fcPcd 
- * to fcPcd /2 and set fcMac to fcMac/2.
- * 4. Read a PlcBtePapx at offset FibRgFcLcb97.fcPlcfBtePapx in the Table Stream, and of size 
- * FibRgFcLcb97.lcbPlcfBtePapx. Then find the largest j such that plcbtePapx.aFc[j] ≤ fc. If the 
- * last element of plcbtePapx.aFc is less than or equal to fc, then go to step 7. Read a PapxFkp 
- * at offset aPnBtePapx[j].pn *512 in the WordDocument Stream.
- * 5. Find largest k such that PapxFkp.rgfc[k] ≤ fc. If the last element of PapxFkp.rgfc is less 
- * than or equal to fc, then cp is outside the range of character positions in this document, 
- * and is not valid. Let fcLim be PapxFkp.rgfc[k+1].
- * 6. If fcLim ≤ fcMac, then let dfc be (fcLim – fcPcd). If Pcd.fc.fCompressed is zero, then set 
- * dfc to dfc / 2. The last character of the paragraph is at character position PlcPcd.aCp[i] + 
- * dfc – 1. Leave the algorithm.
- * 7. Set cp to PlcPcd.aCp[i+1]. Set i to i + 1. Go to step 2.
-*/
-
 static int doc_parse(const char *filename, void *user_data,
 		int (*main_document)(void *user_data, int ch)
 		)
@@ -3403,17 +3844,30 @@ static int doc_parse(const char *filename, void *user_data,
 
 	FibRgFcLcb97 *rgFcLcb97 = (FibRgFcLcb97 *)(doc.fib.rgFcLcb);
 
-/*
- * Main Document
- * The main document contains all content outside any of the specialized document parts, including
- * anchors that specify where content from the other document parts appears.
- * The main document begins at CP zero, and is FibRgLw97.ccpText characters long.
- * The last character in the main document MUST be a paragraph mark (Unicode 0x000D).
- */
-for (cp = 0; cp <= doc.fib.rgLw97->ccpText; ++cp) {
+/* Main Document
+ * The main document contains all content outside any of 
+ * the specialized document parts, including
+ * anchors that specify where content from the other 
+ * document parts appears.
+ * The main document begins at CP zero, and is 
+ * FibRgLw97.ccpText characters long.
+ * The last character in the main document MUST be a 
+ * paragraph mark (Unicode 0x000D).*/
+//for (cp = 0; cp <= doc.fib.rgLw97->ccpText; ++cp) {
+	cp = 100;
+	CP fcp = _first_cp_in_paragraph(&doc, cp);
+	if (fcp == CPERROR)
+		ERR("FCP ERROR");
+	if (cp == fcp)
+		main_document(user_data, '[');
 	_get_char_for_cp(&doc, cp, user_data, main_document);
-	
-}
+	CP lcp = _last_cp_in_paragraph(&doc, cp);
+	if (lcp == CPERROR)
+		ERR("LCP ERROR");
+	printf("LCP: %d\n", lcp);
+	if (cp == lcp)
+		main_document(user_data, ']');
+//}
 
 
 #ifdef DEBUG
