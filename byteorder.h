@@ -2,7 +2,7 @@
  * File              : byteorder.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 20.02.2023
- * Last Modified Date: 20.02.2023
+ * Last Modified Date: 26.05.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -51,7 +51,7 @@ static uint32_t bo_32_sw (uint32_t i)
 	c3 = (i >> 16) & 255;
 	c4 = (i >> 24) & 255;
 
-	u_int32_t k = ((uint32_t)c1 << 24) 
+	uint32_t k = ((uint32_t)c1 << 24) 
 		   + ((uint32_t)c2 << 16) 
 			 + ((uint32_t)c3 << 8) 
 			 + c4;
