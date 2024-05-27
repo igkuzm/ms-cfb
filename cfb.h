@@ -78,11 +78,11 @@ typedef struct tagFILETIME {
 } FILETIME, TIME_T        ;//[8 bytes]      
 
 
-const SECT MAXSECT        = 0xFFFFFFFB; 
-const SECT DIFSECT        = 0xFFFFFFFC; 
-const SECT FATSECT        = 0xFFFFFFFD;
-const SECT ENDOFCHAIN     = 0xFFFFFFFE;
-const SECT FREESECT       = 0xFFFFFFFF;
+static const SECT MAXSECT        = 0xFFFFFFFB; 
+static const SECT DIFSECT        = 0xFFFFFFFC; 
+static const SECT FATSECT        = 0xFFFFFFFD;
+static const SECT ENDOFCHAIN     = 0xFFFFFFFE;
+static const SECT FREESECT       = 0xFFFFFFFF;
  
 /*
  * HEADER
