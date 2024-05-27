@@ -15,7 +15,6 @@
  * compound file structure does not impose any restrictions.
  */
 
-#include <cstdint>
 #ifdef __cplusplus
 extern "C"{
 #endif
