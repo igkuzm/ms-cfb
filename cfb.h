@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 25.01.2024
+ * Last Modified Date: 27.05.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -333,26 +333,26 @@ enum {
 
 static void _cfb_dir_sw(cfb_dir * dir){
 	
-	dir->_cb = bo_16_sw(dir->_cb);
+	dir->_cb = bswap_16(dir->_cb);
 	
-	dir->_sidLeftSib = bo_32_sw(dir->_sidLeftSib);
-	dir->_sidRightSib = bo_32_sw(dir->_sidRightSib);
-	dir->_sidChild = bo_32_sw(dir->_sidChild);
+	dir->_sidLeftSib = bswap_32(dir->_sidLeftSib);
+	dir->_sidRightSib = bswap_32(dir->_sidRightSib);
+	dir->_sidChild = bswap_32(dir->_sidChild);
 	
-	dir->_clsId.a = bo_32_sw(dir->_clsId.a); 
-	dir->_clsId.b = bo_32_sw(dir->_clsId.b); 
-	dir->_clsId.c = bo_32_sw(dir->_clsId.c); 
-	dir->_clsId.d = bo_32_sw(dir->_clsId.d); 
+	dir->_clsId.a = bswap_32(dir->_clsId.a); 
+	dir->_clsId.b = bswap_32(dir->_clsId.b); 
+	dir->_clsId.c = bswap_32(dir->_clsId.c); 
+	dir->_clsId.d = bswap_32(dir->_clsId.d); 
 
-	dir->_dwUserFlags = bo_32_sw(dir->_dwUserFlags);
-	dir->_time[0].dwLowDateTime = bo_32_sw(dir->_time[0].dwLowDateTime);
-	dir->_time[0].dwHighDateTime = bo_32_sw(dir->_time[0].dwHighDateTime);
-	dir->_time[1].dwLowDateTime = bo_32_sw(dir->_time[1].dwLowDateTime);
-	dir->_time[1].dwHighDateTime = bo_32_sw(dir->_time[1].dwHighDateTime);	
+	dir->_dwUserFlags = bswap_32(dir->_dwUserFlags);
+	dir->_time[0].dwLowDateTime = bswap_32(dir->_time[0].dwLowDateTime);
+	dir->_time[0].dwHighDateTime = bswap_32(dir->_time[0].dwHighDateTime);
+	dir->_time[1].dwLowDateTime = bswap_32(dir->_time[1].dwLowDateTime);
+	dir->_time[1].dwHighDateTime = bswap_32(dir->_time[1].dwHighDateTime);	
 
-	dir->_sectStart = bo_32_sw(dir->_sectStart);
-	dir->_ulSize = bo_32_sw(dir->_ulSize);
-	dir->_dptPropType = bo_16_sw(dir->_dptPropType);
+	dir->_sectStart = bswap_32(dir->_sectStart);
+	dir->_ulSize = bswap_32(dir->_ulSize);
+	dir->_dptPropType = bswap_16(dir->_dptPropType);
 }
 
 //return len of utf8 string
@@ -426,7 +426,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		// get SECT offset
 		SECT FAT = cfb->header._sectFat[FAT_INDEX];
 		if (cfb->biteOrder) 
-			FAT = bo_32_sw(FAT);		
+			FAT = bswap_32(FAT);		
 		DWORD off = 
 			FAT * ssize + ssize
 			+ SECT_INDEX * 4;
@@ -442,7 +442,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 			return ENDOFCHAIN;
 		};
 		if (cfb->biteOrder) 
-			ch = bo_32_sw(ch);		
+			ch = bswap_32(ch);		
 
 #ifdef DEBUG
 	LOG("0x%x\n", ch);
@@ -485,7 +485,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 			return ENDOFCHAIN;
 		};
 		if (cfb->biteOrder) 
-			ch = bo_32_sw(ch);
+			ch = bswap_32(ch);
 		DIFAT = ch;	
 	}
 	// get FAT 
@@ -500,7 +500,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
-		ch = bo_32_sw(ch);
+		ch = bswap_32(ch);
 	FAT = ch;	
 
 	// get SECT offset
@@ -514,7 +514,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
-		ch = bo_32_sw(ch);
+		ch = bswap_32(ch);
 #ifdef DEBUG
 	LOG("0x%x\n", ch);
 #endif		
@@ -566,7 +566,7 @@ static SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
-		ch = bo_32_sw(ch);
+		ch = bswap_32(ch);
 #ifdef DEBUG
 	LOG("0x%x\n", ch);
 #endif		
@@ -848,26 +848,26 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 
 	// make byte order change
 	if (cfb->biteOrder){
-		cfb->header._clid.a = bo_32_sw(cfb->header._clid.a); 
-		cfb->header._clid.b = bo_32_sw(cfb->header._clid.b); 
-		cfb->header._clid.c = bo_32_sw(cfb->header._clid.c); 
-		cfb->header._clid.d = bo_32_sw(cfb->header._clid.d); 
+		cfb->header._clid.a = bswap_32(cfb->header._clid.a); 
+		cfb->header._clid.b = bswap_32(cfb->header._clid.b); 
+		cfb->header._clid.c = bswap_32(cfb->header._clid.c); 
+		cfb->header._clid.d = bswap_32(cfb->header._clid.d); 
 
-		cfb->header._uMinorVersion = bo_16_sw(cfb->header._uMinorVersion);
-		cfb->header._uDllVersion = bo_16_sw(cfb->header._uDllVersion);
-		cfb->header._uSectorShift = bo_16_sw(cfb->header._uSectorShift);
-		cfb->header._uMiniSectorShift = bo_16_sw(cfb->header._uMiniSectorShift);
-		cfb->header._usReserved = bo_16_sw(cfb->header._usReserved);
-		cfb->header._ulReserved1 = bo_32_sw(cfb->header._ulReserved1); 
-		cfb->header._ulReserved2 = bo_32_sw(cfb->header._ulReserved2); 
-		cfb->header._csectFat = bo_32_sw(cfb->header._csectFat); 
-		cfb->header._sectDirStart = bo_32_sw(cfb->header._sectDirStart); 
-		cfb->header._signature = bo_32_sw(cfb->header._signature); 
-		cfb->header._ulMiniSectorCutoff = bo_32_sw(cfb->header._ulMiniSectorCutoff); 
-		cfb->header._sectMiniFatStart = bo_32_sw(cfb->header._sectMiniFatStart); 
-		cfb->header._csectMiniFat = bo_32_sw(cfb->header._csectMiniFat); 
-		cfb->header._sectDifStart = bo_32_sw(cfb->header._sectDifStart); 
-		cfb->header._csectDif = bo_32_sw(cfb->header._csectDif); 
+		cfb->header._uMinorVersion = bswap_16(cfb->header._uMinorVersion);
+		cfb->header._uDllVersion = bswap_16(cfb->header._uDllVersion);
+		cfb->header._uSectorShift = bswap_16(cfb->header._uSectorShift);
+		cfb->header._uMiniSectorShift = bswap_16(cfb->header._uMiniSectorShift);
+		cfb->header._usReserved = bswap_16(cfb->header._usReserved);
+		cfb->header._ulReserved1 = bswap_32(cfb->header._ulReserved1); 
+		cfb->header._ulReserved2 = bswap_32(cfb->header._ulReserved2); 
+		cfb->header._csectFat = bswap_32(cfb->header._csectFat); 
+		cfb->header._sectDirStart = bswap_32(cfb->header._sectDirStart); 
+		cfb->header._signature = bswap_32(cfb->header._signature); 
+		cfb->header._ulMiniSectorCutoff = bswap_32(cfb->header._ulMiniSectorCutoff); 
+		cfb->header._sectMiniFatStart = bswap_32(cfb->header._sectMiniFatStart); 
+		cfb->header._csectMiniFat = bswap_32(cfb->header._csectMiniFat); 
+		cfb->header._sectDifStart = bswap_32(cfb->header._sectDifStart); 
+		cfb->header._csectDif = bswap_32(cfb->header._csectDif); 
 	}
 	
 	/* check signature */

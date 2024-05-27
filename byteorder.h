@@ -2,74 +2,77 @@
  * File              : byteorder.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 20.02.2023
- * Last Modified Date: 26.05.2024
+ * Last Modified Date: 27.05.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
 #ifndef BYTEORDER_H_
 #define BYTEORDER_H_
 
+/* all data in CFB MUST
+ * be stored in little-endian byte order. The only exception
+ * is in user-defined data streams, where the
+ * compound file structure does not impose any restrictions.
+ */
+
+#include <cstdint>
 #ifdef __cplusplus
 extern "C"{
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <byteswap.h>
 
-//switch bite order
-//64 bit
-static uint64_t bo_64_sw (uint64_t i)
+static bool is_little_endian()
 {
-    unsigned char c1, c2, c3, c4, c5, c6, c7, c8;
-
-	c1 = i & 255;
-	c2 = (i >> 8) & 255;
-	c3 = (i >> 16) & 255;
-	c4 = (i >> 24) & 255;
-	c5 = (i >> 32) & 255;
-	c6 = (i >> 40) & 255;
-	c7 = (i >> 48) & 255;
-	c8 = (i >> 56) & 255;
-
-	uint64_t k = ((uint64_t)c1 << 56) 
-			 + ((uint64_t)c2 << 48) 
-			 + ((uint64_t)c3 << 40) 
-			 + ((uint64_t)c4 << 32) 
-			 + ((uint64_t)c5 << 24) 
-			 + ((uint64_t)c6 << 16) 
-			 + ((uint64_t)c7 << 8) 
-			 + c8;
-	return k;
+	int x = 1;
+	return *(char*)&x;
 }
 
-//32 bit
-static uint32_t bo_32_sw (uint32_t i)
+// host to cfb
+static uint16_t htocs (uint16_t x)
 {
-    unsigned char c1, c2, c3, c4;
-
-	c1 = i & 255;
-	c2 = (i >> 8) & 255;
-	c3 = (i >> 16) & 255;
-	c4 = (i >> 24) & 255;
-
-	uint32_t k = ((uint32_t)c1 << 24) 
-		   + ((uint32_t)c2 << 16) 
-			 + ((uint32_t)c3 << 8) 
-			 + c4;
-	return k;
+	if (!is_little_endian())
+		return bswap_16(x);
+	return x;
 }
 
-//16 bit
-static uint16_t bo_16_sw (uint16_t i)
+static uint32_t htocl (uint32_t x)
 {
-    unsigned char c1, c2;
-    
-	c1 = i & 255;
-	c2 = (i >> 8) & 255;
-
-	uint16_t k = (c1 << 8) + c2;
-	return k;
+	if (!is_little_endian())
+		return bswap_32(x);
+	return x;
 }
 
+static uint64_t htocll (uint64_t x)
+{
+	if (!is_little_endian())
+		return bswap_64(x);
+	return x;
+}
+
+// cfb to host
+static uint16_t ctohs (uint16_t x)
+{
+	if (!is_little_endian())
+		return bswap_16(x);
+	return x;
+}
+
+static uint32_t ctohl (uint32_t x)
+{
+	if (!is_little_endian())
+		return bswap_32(x);
+	return x;
+}
+
+static uint64_t ctohll (uint64_t x)
+{
+	if (!is_little_endian())
+		return bswap_64(x);
+	return x;
+}
 
 #ifdef __cplusplus
 }
