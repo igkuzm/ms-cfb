@@ -2,7 +2,7 @@
  * File              : cfb.h
  * Author            : Igor V. Sementsov <ig.kuzm@gmail.com>
  * Date              : 03.11.2022
- * Last Modified Date: 27.05.2024
+ * Last Modified Date: 29.05.2024
  * Last Modified By  : Igor V. Sementsov <ig.kuzm@gmail.com>
  */
 
@@ -437,7 +437,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		SECT ch;
 		if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read SECT from offset: %u\n", off);
+	LOG("Error to read SECT from offset: %u", off);
 #endif		
 			return ENDOFCHAIN;
 		};
@@ -445,7 +445,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 			ch = bswap_32(ch);		
 
 #ifdef DEBUG
-	LOG("0x%x\n", ch);
+	LOG("0x%x", ch);
 #endif		
 		return ch;
 
@@ -480,7 +480,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 		SECT ch;
 		if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read DIFAT from offset: %u\n", off);
+	LOG("Error to read DIFAT from offset: %u", off);
 #endif		
 			return ENDOFCHAIN;
 		};
@@ -495,7 +495,7 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 	SECT ch;
 	if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read FAT from offset: %u\n", off);
+	LOG("Error to read FAT from offset: %u", off);
 #endif		
 		return ENDOFCHAIN;
 	};
@@ -509,14 +509,14 @@ static SECT _cfb_next_sect_in_FAT_chain(SECT sect, struct cfb * cfb){
 	fseek(cfb->fp, off, SEEK_SET);
 	if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read SECT from offset: %u\n", off);
+	LOG("Error to read SECT from offset: %u", off);
 #endif		
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
 		ch = bswap_32(ch);
 #ifdef DEBUG
-	LOG("0x%x\n", ch);
+	LOG("0x%x", ch);
 #endif		
 	return ch;	
 }
@@ -561,14 +561,14 @@ static SECT _cfb_next_sect_in_mFAT_chain(SECT sect, struct cfb * cfb){
 	SECT ch;
 	if (fread(&ch, 4, 1, cfb->fp) != 1){
 #ifdef DEBUG
-	LOG("Error to read SECT from offset: %u\n", off);
+	LOG("Error to read SECT from offset: %u", off);
 #endif		
 		return ENDOFCHAIN;
 	};
 	if (cfb->biteOrder) 
 		ch = bswap_32(ch);
 #ifdef DEBUG
-	LOG("0x%x\n", ch);
+	LOG("0x%x", ch);
 #endif		
 	return ch;	
 }
@@ -596,17 +596,17 @@ static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 #ifdef DEBUG
 	char dirname[BUFSIZ];
 	cfb_dir_name(dir, dirname);	
-	LOG("start cfb_get_stream_by_dir with dirname: %s\n", dirname);
+	LOG("dirname: %s", dirname);
 #endif
 
 	ULONG s = dir->_ulSize;    //size of stream
 
 #ifdef DEBUG
-	LOG("cfb_get_stream_by_dir: stream size: %u\n", s);
+	LOG("stream size: %u", s);
 #endif
 	SECT  sect = dir->_sectStart; // start position in FAT/miniFAT chain
 #ifdef DEBUG
-	LOG("cfb_get_stream_by_dir: stream start sector: 0x%x\n", dir->_sectStart);
+	LOG("stream start sector: 0x%x", dir->_sectStart);
 #endif
 
 	DWORD ssize;  //sector size	
@@ -619,7 +619,7 @@ static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	//for root always use FAT
 	if (s < cfb->header._ulMiniSectorCutoff && dir->_mse != STGTY_ROOT){
 #ifdef DEBUG
-	LOG("cfb_get_stream_by_dir: stream is minifat\n");
+	LOG("stream is minifat");
 #endif		
 		//use miniFAT
 		ssize = 1 << cfb->header._uMiniSectorShift;
@@ -629,7 +629,7 @@ static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	}
 	else {
 #ifdef DEBUG
-	LOG("cfb_get_stream_by_dir: stream is fat\n");
+	LOG("stream is fat");
 #endif				
 		//use FAT
 		ssize = 1 << cfb->header._uSectorShift;
@@ -641,8 +641,8 @@ static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	DWORD off = sect * ssize + sstart; //offset
 	
 #ifdef DEBUG
-	LOG("cfb_get_stream_by_dir: sectorsize: %d\n", ssize);
-	LOG("cfb_get_stream_by_dir: offset: %d\n"    , off  );
+	LOG("sectorsize: %d", ssize);
+	LOG("offset: %d"    , off  );
 #endif				
 	
 	//create stream
@@ -710,7 +710,7 @@ static int _cfb_dir_find(struct cfb *cfb, cfb_dir * dir, const char * name, void
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 #ifdef DEBUG
-	LOG("_cfb_dir_find for name: %s\n", name);
+	LOG("name: %s", name);
 #endif		
 	
 	if(!dir)
@@ -753,7 +753,7 @@ static int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data
 		int (*callback)(void * user_data, cfb_dir dir))
 {
 #ifdef DEBUG
-	LOG("start cfb_dir_by_name: %s\n", name);
+	LOG("name: %s", name);
 #endif		
 	
 	cfb_dir dir;
@@ -763,7 +763,7 @@ static int cfb_dir_by_name(struct cfb * cfb, const char * name, void * user_data
 
 static int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * name){
 #ifdef DEBUG
-	LOG("start cfb_get_dir_by_name: %s\n", name);
+	LOG("name: %s", name);
 #endif		
 	
 	return cfb_dir_by_name(cfb, name, dir, cfb_dir_callback);
@@ -771,7 +771,7 @@ static int cfb_get_dir_by_name(struct cfb * cfb, cfb_dir * dir, const char * nam
 
 static FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
 #ifdef DEBUG
-	LOG("start cfb_get_stream_by_sid: %d\n", sid);
+	LOG("sid: %d", sid);
 #endif		
 	
 	cfb_dir dir;
@@ -783,7 +783,7 @@ static FILE * cfb_get_stream_by_sid(struct cfb * cfb, SID sid) {
 
 static FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
 #ifdef DEBUG
-	LOG("start cfb_get_stream_by_name for dir: %s\n", name);
+	LOG("dir name: %s", name);
 #endif		
 	
 	cfb_dir dir;
@@ -802,7 +802,7 @@ static FILE * cfb_get_stream_by_name(struct cfb * cfb, const char * name) {
 
 static int _cfb_init(struct cfb * cfb, FILE *fp){
 #ifdef DEBUG
-	LOG("start _cfb_init\n");
+	LOG("start");
 #endif
 
 	memset(cfb, 0, sizeof(struct cfb));
@@ -821,8 +821,9 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	fseek(fp, 0x01C, SEEK_SET);	
 	if (fread(&byteOrder, 2, 1, fp) != 1) {
 #ifdef DEBUG
-	LOG("_cfb_init: error to get byte orger\n");
+	LOG("error to get byte orger");
 #endif		
+		ERR("can't read MS CFB file");
 		return CFB_READ_ERR|CFB_BYTEORDE_ERR;
 	}
 
@@ -831,8 +832,9 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 		cfb->biteOrder = true;
 	} else {                         //error
 #ifdef DEBUG
-	LOG("_cfb_init: byte orger check error: %x\n", byteOrder);
+	LOG("byte orger check error: %x", byteOrder);
 #endif									 
+		ERR("can't read MS CFB file");
 		return CFB_BYTEORDE_ERR;
 	}
 
@@ -841,8 +843,9 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	fseek(fp, 0, SEEK_SET);	
 	if (fread(&cfb->header, 512, 1, fp) != 1){
 #ifdef DEBUG
-	LOG("_cfb_init: can't read file header\n");
-#endif									 
+	LOG("can't read file header");
+#endif									
+		ERR("can't read MS CFB file");		 
 		return CFB_READ_ERR|CFB_HEADER_ERR;
 	}
 
@@ -872,7 +875,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	
 	/* check signature */
 #ifdef DEBUG
-	LOG("_cfb_init: check signature\n");
+	LOG("check signature");
 #endif									 
 	bool signature = true;
 	char * ptr = (char *)(cfb->header._abSig);
@@ -887,19 +890,18 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 
 	if (!signature){
 #ifdef DEBUG
-	LOG("_cfb_init: error signature: ");
+	LOG("error signature: ");
 	for (i=0; i<8; i++){	
 		LOG("%x, ", cfb->header._abSig[i]);
 	}
-	LOG("\n");
 #endif									 
-		
+		ERR("can't read MS CFB file");		 
 		return CFB_SIG_ERR;
 	}
 
 	if (cfb->header._csectMiniFat > 0){
 #ifdef DEBUG
-	LOG("_cfb_init: get mini stream\n");
+	LOG("get mini stream");
 #endif									 
 /*
  * The mini stream is chained within the FAT in exactly the same fashion as any normal stream. 
@@ -921,7 +923,7 @@ static int cfb_open(struct cfb * cfb, const char * filename){
 	FILE * fp = fopen(filename, "r");
 	if (!fp){
 #ifdef DEBUG
-	LOG("cfb_open: can't open file: %s\n", filename);
+	LOG("can't open file: %s", filename);
 #endif		
 		return -1;
 	}
@@ -930,11 +932,11 @@ static int cfb_open(struct cfb * cfb, const char * filename){
 		if ( errno == ESPIPE ) {
 			//We got non-seekable file, create temp file
 #ifdef DEBUG
-	LOG("cfb_open: We got non-seekable file, create temp file\n");
+	LOG("non-seekable file, create temp file...");
 #endif			
 			if((newfile=tmpfile()) == NULL) {
 #ifdef DEBUG
-	LOG("cfb_open: can't create temp file\n");
+	LOG("can't create temp file");
 #endif				
 				return -1;
 			}
@@ -945,9 +947,7 @@ static int cfb_open(struct cfb * cfb, const char * filename){
 			fclose(fp);
 			fseek(newfile,0,SEEK_SET);
 		} else {
-#ifdef DEBUG
-	perror("cfb_open");
-#endif			
+			ERR("can't open file");		 
 			return -1;
 		}
 	} else {
