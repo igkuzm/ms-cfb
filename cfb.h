@@ -1010,7 +1010,7 @@ static int _cfb_init(struct cfb * cfb, FILE *fp){
 	LOG("check signature");
 #endif									 
 	bool signature = true;
-	char * ptr = (char *)(cfb->header._abSig);
+	unsigned char * ptr = (unsigned char *)(cfb->header._abSig);
 
 	for (i=0; i<8; i++){
 		if ((*ptr != cfb_signature[i] && *ptr != cfb_signature_old[i])){
