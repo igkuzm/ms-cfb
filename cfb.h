@@ -726,10 +726,10 @@ static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	LOG("dirname: %s", dirname);
 #endif
 
-	ULONG s = dir->_ulSize;    //size of stream
+	ULONG st = dir->_ulSize;    //size of stream
 
 #ifdef DEBUG
-	LOG("stream size: %u", s);
+	LOG("stream size: %u", st);
 #endif
 	SECT  sect = dir->_sectStart; // start position in FAT/miniFAT chain
 #ifdef DEBUG
@@ -744,7 +744,7 @@ static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 	//check FAT or miniFAT
 	//use miniFAT is size < 4096
 	//for root always use FAT
-	if (s < cfb->header._ulMiniSectorCutoff && dir->_mse != STGTY_ROOT){
+	if (st < cfb->header._ulMiniSectorCutoff && dir->_mse != STGTY_ROOT){
 #ifdef DEBUG
 	LOG("stream is minifat");
 #endif		
