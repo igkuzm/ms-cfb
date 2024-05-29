@@ -782,7 +782,12 @@ static FILE * cfb_get_stream_by_dir(struct cfb * cfb, cfb_dir * dir) {
 
 		// read/write data
 		char buf[ssize];
-		fread (buf, ssize, 1, fp);
+		if (fread (buf, ssize, 1,
+					fp) != 1)
+		{
+			ERR("fread");
+			return NULL;
+		}
 		fwrite(buf, ssize, 1, stream );
 		
 		// get next FAT/miniFAT
